@@ -39,6 +39,8 @@ export async function fetchUserTables(
   const res = await sapApi.get("/UserTablesMD", {
     params: {
       $select: "TableName,TableDescription,TableType",
+      $top: 100,
+  $skip: 0
     },
   })
  
