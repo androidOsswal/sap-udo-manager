@@ -21,26 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { fetchLinkedUDO } from "@/api/userTableMD"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { useMutation } from "@tanstack/react-query"
+
 import { createUdoWithBatch } from "@/api/udoBatch"
 import { toast } from "sonner"
 
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandItem,
-  CommandEmpty,
-  CommandGroup,
-} from "@/components/ui/command"
+import LinkedUDOCell from "@/components/LInkedUDO"
 type TableRow = {
   id: string
   name: string
@@ -128,146 +114,6 @@ function loadSavedRows(): TableRow[] {
     return initialRows
   }
 }
-type LinkedUDO = {
-  TableName: string
-  TableDescription: string
-}
-export function LinkedUDOCell(props: DataGridCellProps<TableRow>) {
-  const [open, setOpen] = React.useState(false)
-  const [search, setSearch] = React.useState("")
-
-  const type = props.cell.row.original.type
-  const subtype = props.cell.row.original.subtype
-
-  const isAllowedType = type === "db_Alpha" || type === "db_numeric"
-  const isCheckbox = subtype === "st_checkbox"
-
-  const isDisabled = !isAllowedType || isCheckbox
-  const val = props.cell.row.original.linkeUDO ?? ""
-  const {
-    data: linkedUDOData = [],
-    isLoading,
-    isFetching,
-    isError,
-  } = useQuery({
-    queryKey: ["linkedudo", search.trim()],
-    queryFn: () => fetchLinkedUDO(search),
-    enabled: open,
-  })
-
-  const debounceID = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedOnSelect = (table:LinkedUDO) => {
-    
-    if (debounceID.current) {
-      clearTimeout(debounceID.current)
-    }
-    debounceID.current = setTimeout(() => {
-       
-      props.tableMeta?.onDataUpdate?.({
-        rowIndex: props.rowIndex,
-        columnId: props.columnId,
-        value: table.TableName,
-      })
-      setOpen(false)
-    }, 5000)
-  }
-
-  if (isDisabled) {
-    return (
-      <button
-        disabled
-        className="w-full cursor-not-allowed px-2 py-1 text-left text-gray-400"
-      >
-        Select Linked UDO
-      </button>
-    )
-  }
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-
-        if (nextOpen) {
-          setSearch("")
-        }
-
-        if (nextOpen && !props.readOnly) {
-          props.tableMeta?.onCellEditingStart?.(props.rowIndex, props.columnId)
-        } else {
-          props.tableMeta?.onCellEditingStop?.()
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <button
-          disabled={props.readOnly}
-          className="w-full px-2 py-1 text-left"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {val || "Select linked UDO"}
-        </button>
-      </DialogTrigger>
-      <DialogContent
-        className="max-w-md p-0"
-        data-grid-cell-editor=""
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <DialogTitle className="border-b p-3 font-medium mb-2">
-          Select Linked UDO
-        </DialogTitle>
-        <DialogDescription className="-mt-3 -mb-8 px-3">
-          Choose a linked user from the list.
-        </DialogDescription>
-        <Command shouldFilter={false}>
-          <CommandInput
-            autoFocus
-            placeholder="Search UDO..."
-            value={search}
-            onValueChange={setSearch}
-          />
-
-          <CommandList className="max-h-64 overflow-y-auto">
-            {isLoading || isFetching ? (
-              <CommandEmpty>Loading linked UDOs...</CommandEmpty>
-            ) : isError ? (
-              <CommandEmpty>Could not load linked UDOs.</CommandEmpty>
-            ) : linkedUDOData.length === 0 ? (
-              <CommandEmpty>No results found.</CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {linkedUDOData.map((udo) => (
-                  <CommandItem
-                    key={udo.TableName}
-                    value={udo.TableName}
-                    // onSelect={() => {
-                    //   props.tableMeta?.onDataUpdate?.({
-                    //     rowIndex: props.rowIndex,
-                    //     columnId: props.columnId,
-                    //     value: udo.TableName,
-                    //   })
-                    //   setOpen(false)
-                    // }}
-                    onSelect={() => debouncedOnSelect(udo)}
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium">{udo.TableName}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {udo.TableDescription || "No description"}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 const Create = () => {
   const [rows, setRows] = React.useState<TableRow[]>(loadSavedRows)
@@ -312,7 +158,6 @@ const Create = () => {
         validValues: Array<{ key: string; value: string }>
       }>
     }) => {
-    
       return createUdoWithBatch(table, fields)
     },
     onSuccess: () => {
@@ -327,7 +172,6 @@ const Create = () => {
   })
 
   const onSubmit = (values: TableFormValues) => {
-   
     if (!values.tableName) {
       toast.error("Add table name before creating the table.")
       return
@@ -384,8 +228,13 @@ const Create = () => {
                 value={row.name ?? ""}
                 placeholder="Enter name"
                 className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(props.rowIndex, "name")
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
                 onChange={(e) => {
-                 
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: "name",
@@ -393,6 +242,7 @@ const Create = () => {
                   })
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -411,8 +261,16 @@ const Create = () => {
                 value={row.description ?? ""}
                 placeholder="Enter description"
                 className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(
+                    props.rowIndex,
+                    "description"
+                  )
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
                 onChange={(e) => {
-               
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: "description",
@@ -420,6 +278,7 @@ const Create = () => {
                   })
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -454,28 +313,31 @@ const Create = () => {
 
             return (
               <Input
-                type="number"
                 value={row.size ?? ""}
-                min={0}
-                max={254}
-                disabled={!isSizeEnabled}
+                type="number"
                 placeholder="Enter Size"
-                className={`size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 enabled:cursor-pointer disabled:cursor-not-allowed disabled:text-zinc-400 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
-                onChange={(event) => {
-                  const value = event.target.value
+                disabled={!isSizeEnabled}
+                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(props.rowIndex, "size")
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
+                onChange={(e) => {
+                  const value = e.target.value
                   const size =
                     value === ""
                       ? undefined
                       : Math.min(Math.max(Number(value), 1), 254)
-
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
-                    columnId: props.columnId,
+                    columnId: "size",
                     value: size,
                   })
                 }}
-                onClick={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -584,6 +446,8 @@ const Create = () => {
         header: "Linked UDO",
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
+            console.log(props.tableMeta)
+
             return <LinkedUDOCell {...props} />
           },
         },
@@ -596,11 +460,13 @@ const Create = () => {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const val = props.cell.row.original.linkesystemobj
             const type = props.cell.row.original.type
+            const linkeUDO = props.cell.row.original.linkeUDO ? true : false
+
             const subtype = props.cell.row.original.subtype
             const isAllowedType = type === "db_Alpha" || type === "db_numeric"
             const isCheckbox = subtype === "st_checkbox"
             const isDisabled = !isAllowedType || isCheckbox
-            if (isDisabled) {
+            if (isDisabled || linkeUDO) {
               return (
                 <button
                   disabled
@@ -611,12 +477,33 @@ const Create = () => {
               )
             }
             return (
+              // <Input
+              //   value={val ?? ""}
+              //   placeholder="Enter Linked System Object"
+              //   className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+              //   onChange={(e) => {
+              //     props.tableMeta?.onDataUpdate?.({
+              //       rowIndex: props.rowIndex,
+              //       columnId: "linkesystemobj",
+              //       value: e.target.value,
+              //     })
+              //   }}
+              //   onClick={(e) => e.stopPropagation()}
+              // />
               <Input
                 value={val ?? ""}
                 placeholder="Enter Linked System Object"
                 className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(
+                    props.rowIndex,
+                    "linkesystemobj"
+                  )
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
                 onChange={(e) => {
-                 
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: "linkesystemobj",
@@ -624,6 +511,7 @@ const Create = () => {
                   })
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -747,8 +635,6 @@ const Create = () => {
   const onRowAdd = React.useCallback(() => {
     let newIndex = 0
     setRows((currentRows) => {
-      
-
       newIndex = currentRows.length
       return [...currentRows, createEmptyRow()]
     })

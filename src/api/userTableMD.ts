@@ -1,3 +1,4 @@
+
 import { sapApi } from "./client"
 type LinkedUDOs = {
   TableName: string
@@ -33,17 +34,19 @@ export type UserTableMD = {
   TableType: "bott_Document" | "bott_DocumentLines"
 }
 
-export async function fetchUserTables(
-  
-): Promise<UserTableMD[]> {
-  const res = await sapApi.get("/UserTablesMD", {
-    params: {
-      $select: "TableName,TableDescription,TableType",
-      $top: 100,
-  $skip: 0
-    },
-  })
- 
+export async function fetchUserTables(search = ""): Promise<UserTableMD[]> {
+  const params: Record<string, string | number> = {
+    $select: "TableName,TableDescription,TableType",
+    $top: 100, // increase limit
+    $skip: 0,
+  }
+
+  if (search.trim()) {
+    const escaped = search.replaceAll("'", "''")
+    params.$filter = `contains(TableName,'${escaped}') or contains(TableDescription,'${escaped}')`
+  }
+
+  const res = await sapApi.get("/UserTablesMD", { params })
 
   return res.data?.value ?? []
 }

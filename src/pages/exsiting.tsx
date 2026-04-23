@@ -39,11 +39,31 @@ import {
   CommandGroup,
 } from "@/components/ui/command"
 
-
 export type UserTableMD = {
   TableName: string
   TableDescription: string
   TableType: "bott_Document" | "bott_DocumentLines"
+}
+type TableSelectionType = {
+  mode: "name" | "description"
+  value: string
+  onSelect: (table: UserTableMD) => void
+  tableType: string
+  disable?: boolean
+}
+type TableRow = {
+  id: string
+  fieldId?: number //FieldID, need for PATCH
+  name: string
+  description: string
+  type: string
+  subtype?: string
+  value?: KeyValueItemData[]
+  linkeUDO?: string
+  linkesystemobj?: string
+  size?: number
+  mandatory?: boolean
+  default?: string
 }
 
 function TableSelectorDialog({
@@ -52,26 +72,20 @@ function TableSelectorDialog({
   onSelect,
   tableType,
   disable,
-}: {
-  mode: "name" | "description"
-  value: string
-  onSelect: (table: UserTableMD) => void
-  tableType: string
-  disable?: boolean
-}) {
+}: TableSelectionType) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
 
+  // const { data: userTables = [] } = useQuery({
+  //   queryKey: ["userTables", tableType],
+  //   queryFn: () => fetchUserTables(),
+  // })
   const { data: userTables = [] } = useQuery({
-    queryKey: ["userTables", tableType],
-    queryFn: () => fetchUserTables(),
-  })
-console.log(userTables);
+  queryKey: ["userTables", search],
+  queryFn: () => fetchUserTables(search),
+})
 
-  const filtered = userTables.filter((t) => {
-    const text = mode === "name" ? t.TableName : t.TableDescription
-    return text?.toLowerCase().includes(search.toLowerCase())
-  })
+  
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -98,11 +112,11 @@ console.log(userTables);
           />
 
           <CommandList className="max-h-64 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {userTables.length === 0 ? (
               <CommandEmpty>No results found.</CommandEmpty>
             ) : (
               <CommandGroup>
-                {filtered.map((t) => (
+               {userTables.map((t) => (
                   <CommandItem
                     key={t.TableName}
                     disabled={disable}
@@ -129,22 +143,8 @@ console.log(userTables);
     </Dialog>
   )
 }
-type TableRow = {
-  id: string
-  fieldId?: number //FieldID, need for PATCH
-  name: string
-  description: string
-  type: string
-  subtype?: string
-  value?: KeyValueItemData[]
-  linkeUDO?: string
-  linkesystemobj?: string
-  size?: number
-  mandatory?: boolean
-  default?: string
-}
 
-//constan
+//constant
 
 const yesNoDefaultOptions = [
   { label: "Yes", value: "tYES" },
@@ -237,118 +237,6 @@ function mapRowToPayload(row: TableRow) {
   }
 }
 
-// function LinkedUDOCell(props: DataGridCellProps<TableRow>) {
-//   const [open, setOpen] = React.useState(false)
-//   const [search, setSearch] = React.useState("")
-//   const type = props.cell.row.original.type
-//   const subtype = props.cell.row.original.subtype
-//   const isAllowedType = type === "db_Alpha" || type === "db_Numeric"
-//   const isCheckbox = subtype === "st_Checkbox"
-//   const isDisabled = !isAllowedType || isCheckbox
-//   const val = props.cell.row.original.linkeUDO ?? ""
-
-//   const {
-//     data: linkedUDOData = [],
-//     isLoading,
-//     isFetching,
-//     isError,
-//   } = useQuery({
-//     queryKey: ["linkedudo", search.trim()],
-//     queryFn: () => fetchLinkedUDO(search),
-//     enabled: open,
-//   })
-
-//   if (isDisabled) {
-//     return (
-//       <button
-//         disabled
-//         className="w-full cursor-not-allowed px-2 py-1 text-left text-gray-400"
-//       >
-//         Select Linked UDO
-//       </button>
-//     )
-//   }
-
-//   return (
-//     <Dialog
-//       open={open}
-//       onOpenChange={(nextOpen) => {
-//         setOpen(nextOpen)
-//         if (nextOpen) setSearch("")
-//         if (nextOpen && !props.readOnly) {
-//           props.tableMeta?.onCellEditingStart?.(props.rowIndex, props.columnId)
-//         } else {
-//           props.tableMeta?.onCellEditingStop?.()
-//         }
-//       }}
-//     >
-//       <DialogTrigger asChild>
-//         <button
-//           disabled={props.readOnly}
-//           className="w-full px-2 py-1 text-left"
-//           onClick={(e) => e.stopPropagation()}
-//         >
-//           {val || "Select linked UDO"}
-//         </button>
-//       </DialogTrigger>
-//       <DialogContent
-//         className="max-w-md p-0"
-//         data-grid-cell-editor=""
-//         onClick={(e) => e.stopPropagation()}
-//         onKeyDown={(e) => e.stopPropagation()}
-//         onPointerDown={(e) => e.stopPropagation()}
-//       >
-//         <DialogTitle className="border-b p-3 font-medium">
-//           Select Linked UDO
-//         </DialogTitle>
-//         <DialogDescription className="-mt-3 -mb-8 px-3">
-//           Choose a linked UDO from the list.
-//         </DialogDescription>
-//         <Command shouldFilter={false}>
-//           <CommandInput
-//             autoFocus
-//             placeholder="Search UDO..."
-//             value={search}
-//             onValueChange={setSearch}
-//           />
-//           <CommandList className="max-h-64 overflow-y-auto">
-//             {isLoading || isFetching ? (
-//               <CommandEmpty>Loading linked UDOs...</CommandEmpty>
-//             ) : isError ? (
-//               <CommandEmpty>Could not load linked UDOs.</CommandEmpty>
-//             ) : linkedUDOData.length === 0 ? (
-//               <CommandEmpty>No results found.</CommandEmpty>
-//             ) : (
-//               <CommandGroup>
-//                 {linkedUDOData.map((udo) => (
-//                   <CommandItem
-//                     key={udo.TableName}
-//                     value={udo.TableName}
-//                     onSelect={() => {
-//                       props.tableMeta?.onDataUpdate?.({
-//                         rowIndex: props.rowIndex,
-//                         columnId: props.columnId,
-//                         value: udo.TableName,
-//                       })
-//                       setOpen(false)
-//                     }}
-//                   >
-//                     <div className="flex flex-col gap-0.5">
-//                       <span className="font-medium">{udo.TableName}</span>
-//                       <span className="text-xs text-muted-foreground">
-//                         {udo.TableDescription || "No description"}
-//                       </span>
-//                     </div>
-//                   </CommandItem>
-//                 ))}
-//               </CommandGroup>
-//             )}
-//           </CommandList>
-//         </Command>
-//       </DialogContent>
-//     </Dialog>
-//   )
-// }
 
 const ManageFields = () => {
   const [rows, setRows] = React.useState<TableRow[]>([])
@@ -369,7 +257,7 @@ const ManageFields = () => {
     enabled:
       !!selectedTableName && !!selectedDescription && !!selectedTableType,
   })
- 
+
   //  fetched fields into  rows
   React.useEffect(() => {
     if (fetchedFields.length > 0) {
@@ -414,7 +302,6 @@ const ManageFields = () => {
       )
     },
   })
- 
 
   const onSubmit = () => {
     if (!selectedTableName) {
@@ -476,13 +363,11 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-       
 
             const options = typeOptionByValue[row.type]
-         
+
             const displaylabel =
               options?.find((op) => op.value === row.type)?.label ?? ""
-
 
             return (
               <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
@@ -629,7 +514,7 @@ const ManageFields = () => {
         header: "Linked UDO",
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
-            //   <LinkedUDOCell {...props} />
+           
             return (
               <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
                 {props.cell.row.original.linkeUDO || "—"}
@@ -691,13 +576,9 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-           
-            
-            if(
-                !row.mandatory
-            ){
-              
-                row.default = ''
+
+            if (!row.mandatory) {
+              row.default = ""
             }
             const validValueOptions =
               row.value
@@ -711,10 +592,7 @@ const ManageFields = () => {
               ? yesNoDefaultOptions
               : validValueOptions
             const displayLabel =
-              options.find((o) => o.value === row.default)?.label ?? "";
-
-
-            
+              options.find((o) => o.value === row.default)?.label ?? ""
 
             if (row.mandatory || validValueOptions.length > 0) {
               return (

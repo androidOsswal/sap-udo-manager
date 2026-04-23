@@ -2190,7 +2190,7 @@ function useDataGrid<TData>({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize()
     }
     return colSizes
-  }, [table.getState().columnSizingInfo, table.getState().columnSizing])
+  }, [table])
 
   const isFirefox = React.useSyncExternalStore(
     React.useCallback(() => () => {}, []),
