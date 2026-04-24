@@ -558,7 +558,7 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-            const isSizeEnabled = row.type === "db_Alpha" && !props.readOnly
+            const isSizeEnabled = row.type === "db_Alpha" && !props.readOnly       
             return (
               <Input
                 type="number"
