@@ -39,7 +39,6 @@ import {
   CommandGroup,
 } from "@/components/ui/command"
 
-
 export type UserTableMD = {
   TableName: string
   TableDescription: string
@@ -63,10 +62,11 @@ function TableSelectorDialog({
   const [search, setSearch] = React.useState("")
 
   const { data: userTables = [] } = useQuery({
-    queryKey: ["userTables", tableType],
-    queryFn: () => fetchUserTables(),
+    queryKey: ["userTables", tableType, search],
+    queryFn: () => fetchUserTables(search),
+    enabled: open,
   })
-console.log(userTables);
+  console.log(userTables)
 
   const filtered = userTables.filter((t) => {
     const text = mode === "name" ? t.TableName : t.TableDescription
@@ -112,13 +112,20 @@ console.log(userTables);
                       setOpen(false)
                     }}
                   >
-                    {mode === "name" ? (
+                    {/* {mode === "name" ? (
                       <span className="font-medium">{t.TableName}</span>
                     ) : (
                       <span className="font-medium">
                         {t.TableDescription || "No description"}
                       </span>
                     )}
+                 */}
+                    <div className="flex flex-col gap-0.5 py-1">
+                      <span className="font-medium">{t.TableName}</span>
+                      <span className="text-xs text-zinc-500">
+                        {t.TableDescription || "No description"}
+                      </span>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -155,7 +162,7 @@ const typeOptionByValue: Record<string, { label?: string; value: string }[]> = {
   db_Memo: [{ value: "db_Memo", label: "Long Text" }],
   db_Numeric: [{ value: "db_Numeric", label: "Integer" }],
   db_Float: [{ value: "db_Float", label: "Decimal" }],
-  db_date: [{ value: "db_date", label: "Date" }],
+  db_Date: [{ value: "db_Date", label: "Date" }],
 }
 const subtypeOptionsByType: Record<string, { label: string; value: string }[]> =
   {
@@ -369,7 +376,7 @@ const ManageFields = () => {
     enabled:
       !!selectedTableName && !!selectedDescription && !!selectedTableType,
   })
- 
+
   //  fetched fields into  rows
   React.useEffect(() => {
     if (fetchedFields.length > 0) {
@@ -414,7 +421,6 @@ const ManageFields = () => {
       )
     },
   })
- 
 
   const onSubmit = () => {
     if (!selectedTableName) {
@@ -474,16 +480,27 @@ const ManageFields = () => {
         accessorKey: "type",
         header: "Type",
         meta: {
+          // customCell: (props: DataGridCellProps<TableRow>) => {
+          //   const row = props.cell.row.original
+
+          //   const options = typeOptionByValue[row.type]
+
+          //   const displaylabel =
+          //     options?.find((op) => op.value === row.type)?.label ?? ""
+
+          //   return (
+          //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+          //       {displaylabel}
+          //     </span>
+          //   )
+          // },
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-       
 
             const options = typeOptionByValue[row.type]
-         
+
             const displaylabel =
-              options?.find((op) => op.value === row.type)?.label ?? ""
-
-
+              options?.find((op) => op.value === row.type)?.label ?? "—"
             return (
               <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
                 {displaylabel}
@@ -691,13 +708,9 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-           
-            
-            if(
-                !row.mandatory
-            ){
-              
-                row.default = ''
+
+            if (!row.mandatory) {
+              row.default = ""
             }
             const validValueOptions =
               row.value
@@ -711,10 +724,7 @@ const ManageFields = () => {
               ? yesNoDefaultOptions
               : validValueOptions
             const displayLabel =
-              options.find((o) => o.value === row.default)?.label ?? "";
-
-
-            
+              options.find((o) => o.value === row.default)?.label ?? ""
 
             if (row.mandatory || validValueOptions.length > 0) {
               return (
