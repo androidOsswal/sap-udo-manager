@@ -70,7 +70,7 @@ function TableSelectorDialog({
   mode,
   value,
   onSelect,
-  tableType,
+  // tableType,
   disable,
 }: TableSelectionType) {
   const [open, setOpen] = React.useState(false)
@@ -81,11 +81,9 @@ function TableSelectorDialog({
   //   queryFn: () => fetchUserTables(),
   // })
   const { data: userTables = [] } = useQuery({
-  queryKey: ["userTables", search],
-  queryFn: () => fetchUserTables(search),
-})
-
-  
+    queryKey: ["userTables", search],
+    queryFn: () => fetchUserTables(search),
+  })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -116,7 +114,7 @@ function TableSelectorDialog({
               <CommandEmpty>No results found.</CommandEmpty>
             ) : (
               <CommandGroup>
-               {userTables.map((t) => (
+                {userTables.map((t) => (
                   <CommandItem
                     key={t.TableName}
                     disabled={disable}
@@ -237,6 +235,20 @@ function mapRowToPayload(row: TableRow) {
   }
 }
 
+function createEmptyRow(): TableRow {
+  return {
+    id: crypto.randomUUID(),
+    name: "",
+    description: "",
+    type: "",
+    subtype: "",
+    value: [{ key: "", value: "", id: "" }] as KeyValueItemData[],
+    linkeUDO: "",
+    linkesystemobj: "",
+    mandatory: false,
+    default: "",
+  }
+}
 
 const ManageFields = () => {
   const [rows, setRows] = React.useState<TableRow[]>([])
@@ -514,7 +526,6 @@ const ManageFields = () => {
         header: "Linked UDO",
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
-           
             return (
               <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
                 {props.cell.row.original.linkeUDO || "—"}
@@ -531,11 +542,12 @@ const ManageFields = () => {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const val = props.cell.row.original.linkesystemobj
             const type = props.cell.row.original.type
+            const linkeUDO = props.cell.row.original.linkeUDO ? true : false
             const subtype = props.cell.row.original.subtype
             const isAllowedType = type === "db_Alpha" || type === "db_Numeric"
             const isCheckbox = subtype === "st_Checkbox"
             const isDisabled = !isAllowedType || isCheckbox
-            if (isDisabled) {
+            if (isDisabled || linkeUDO) {
               return (
                 <button
                   disabled
@@ -676,6 +688,18 @@ const ManageFields = () => {
     []
   )
 
+const onRowAdd = React.useCallback(() => {
+    let newIndex = 0
+    setRows((currentRows) => {
+      newIndex = currentRows.length
+      return [...currentRows, createEmptyRow()]
+    })
+    return {
+      rowIndex: newIndex,
+      columnId: "name",
+    }
+  }, [])
+
   const handleDataChange = React.useCallback((data: TableRow[]) => {
     const updated = data.map((row) => {
       const subtypeOptions = subtypeOptionsByType[row.type] ?? []
@@ -715,6 +739,7 @@ const ManageFields = () => {
     columns,
     getRowId: (row) => row.id,
     onDataChange: handleDataChange,
+    onRowAdd,
     enableSearch: true,
     readOnly: false,
     enablePaste: true,

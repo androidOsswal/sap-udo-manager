@@ -16,12 +16,11 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { backgroundSapLogin } from "@/api/saplogin"
+// import { backgroundSapLogin } from "@/api/saplogin"
 
-
-type LoginResponse = {
-  SessionId?: string //token
-}
+// type LoginResponse = {
+//   SessionId?: string //token
+// }
 
 const normalizeBaseUrl = (url: string) => {
   return url.replace(/\/+$/, "")
@@ -32,10 +31,10 @@ const normalizeBaseUrl = (url: string) => {
 //     value
 //   )}; path=/; max-age=86400; SameSite=Lax`
 // }
-const saveCookie = (name: string, value: string, maxAge = 3600) => {
-  const secure = window.location.protocol === 'https:' ? 'Secure;' : '';
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax; ${secure}`;
-};
+// const saveCookie = (name: string, value: string, maxAge = 3600) => {
+//   const secure = window.location.protocol === "https:" ? "Secure;" : ""
+//   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax; ${secure}`
+// }
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, "Username is required"),
@@ -84,31 +83,70 @@ const getLoginErrorMessage = (error: unknown) => {
 const Login = () => {
   const navigate = useNavigate()
 
+  // const loginMutation = useMutation({
+  //   mutationFn: async (values: LoginFormValues) => {
+  //     const baseUrl = normalizeBaseUrl(values.url)
+
+  //     const response = await axios.post<LoginResponse>(
+  //       `${baseUrl}/b1s/v1/Login`,
+  //       {
+  //         CompanyDB: values.database,
+  //         UserName: values.username,
+  //         Password: values.password,
+  //       },
+  //       {
+  //         withCredentials: true,
+  //       }
+  //     )
+  //     await backgroundSapLogin()
+
+  //     return response.data
+  //   },
+  //   onSuccess: (data, values) => {
+  //     const token = data.SessionId
+
+  //     if (token) {
+  //       saveCookie("B1SESSION", token)
+  //     }
+  //     localStorage.setItem(
+  //       "user-details",
+  //       JSON.stringify({
+  //         url: normalizeBaseUrl(values.url),
+  //         database: values.database,
+  //         username: values.username,
+  //       })
+  //     )
+
+  //     navigate("/")
+  //   },
+  // })
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
       const baseUrl = normalizeBaseUrl(values.url)
 
-      const response = await axios.post<LoginResponse>(
-        `${baseUrl}/b1s/v1/Login`,
+      const response = await axios.post(
+        "http://localhost:3000/setup",
         {
-          CompanyDB: values.database,
           UserName: values.username,
           Password: values.password,
+          CompanyDB: values.database,
+          Url: baseUrl,
         },
         {
           withCredentials: true,
         }
       )
-      await backgroundSapLogin()
+
+      console.log("SETUP DONE:", response.data)
 
       return response.data
     },
-    onSuccess: (data, values) => {
-      const token = data.SessionId
-      
-      if (token) {
-        saveCookie("B1SESSION", token)
-      }
+    onSuccess: (_, values) => {
+      console.log("come here")
+      // const token = data.SessionId
+      // if (token) {
+      //   saveCookie("B1SESSION", token)
+      // }
       localStorage.setItem(
         "user-details",
         JSON.stringify({
@@ -119,6 +157,9 @@ const Login = () => {
       )
 
       navigate("/")
+    },
+    onError: (err) => {
+      console.error(" MUTATION ERROR:", err)
     },
   })
 
