@@ -511,14 +511,14 @@ const ManageFields = () => {
         meta: {
           customCell: (props) => {
             const row = props.cell.row.original
-            const isExistingRow = row.fieldId !== undefined
-            if (isExistingRow) {
-              return (
-                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
-                  {row.description || "—"}
-                </span>
-              )
-            }
+            // const isExistingRow = row.fieldId !== undefined
+            // if (isExistingRow) {
+            //   return (
+            //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
+            //       {row.description || "—"}
+            //     </span>
+            //   )
+            // }
             return (
               <Input
                 value={row.description ?? ""}
@@ -547,14 +547,15 @@ const ManageFields = () => {
 
             const options = typeOptionByValue[row.type]
 
-            const displaylabel = options?.find((op) => op.value === row.type)?.label ?? "—";
+            const displaylabel =
+              options?.find((op) => op.value === row.type)?.label ?? "—"
             console.log(displaylabel)
 
             const isExistingRow = row.fieldId !== undefined
             if (isExistingRow) {
               return (
                 <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
-                  {row.description || "—"}
+                  {displaylabel || "—"}
                 </span>
               )
             }
