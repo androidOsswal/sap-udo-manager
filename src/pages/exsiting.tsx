@@ -46,6 +46,14 @@ export type UserTableMD = {
   TableDescription: string
   TableType: "bott_Document" | "bott_DocumentLines"
 }
+const typeOption = [
+  { label: "Text", value: "db_Alpha" },
+  { label: "Long Text", value: "db_Memo" },
+  { label: "Integer", value: "db_numeric" },
+  { label: "Decimal", value: "db_float" },
+  { label: "Date", value: "date" },
+]
+
 type TableSelectionType = {
   mode: "name" | "description"
   value: string
@@ -499,6 +507,14 @@ const ManageFields = () => {
         meta: {
           customCell: (props) => {
             const row = props.cell.row.original
+            const isExistingRow = row.fieldId !== undefined
+            if (isExistingRow) {
+              return (
+                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
+                  {row.description || "—"}
+                </span>
+              )
+            }
             return (
               <Input
                 value={row.description ?? ""}
@@ -522,31 +538,76 @@ const ManageFields = () => {
         accessorKey: "type",
         header: "Type",
         meta: {
-          // customCell: (props: DataGridCellProps<TableRow>) => {
-          //   const row = props.cell.row.original
-
-          //   const options = typeOptionByValue[row.type]
-
-          //   const displaylabel =
-          //     options?.find((op) => op.value === row.type)?.label ?? ""
-
-          //   return (
-          //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-          //       {displaylabel}
-          //     </span>
-          //   )
-          // },
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
 
             const options = typeOptionByValue[row.type]
 
             const displaylabel =
-              options?.find((op) => op.value === row.type)?.label ?? "—"
+              options?.find((op) => op.value === row.type)?.label ?? "—";
+
+            const isExistingRow = row.fieldId !== undefined
+            if (isExistingRow) {
+              return (
+                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
+                  {row.description || "—"}
+                </span>
+              )
+            }
             return (
-              <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-                {displaylabel}
-              </span>
+              <Select
+                value={row.type ?? ""}
+                disabled={props.readOnly}
+                onOpenChange={(open) => {
+                  if (open && !props.readOnly) {
+                    props.tableMeta?.onCellEditingStart?.(
+                      props.rowIndex,
+                      props.columnId
+                    )
+                  } else {
+                    props.tableMeta?.onCellEditingStop?.()
+                  }
+                }}
+                onValueChange={(value) => {
+                  row.default = ""
+                  props.tableMeta?.onDataUpdate?.({
+                    rowIndex: props.rowIndex,
+                    columnId: props.columnId,
+                    value,
+                  })
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {typeOption ? (
+                    <Badge
+                      variant="secondary"
+                      className="px-1.5 py-px whitespace-pre-wrap"
+                    >
+                      <SelectValue placeholder="Select type" />
+                    </Badge>
+                  ) : (
+                    <SelectValue placeholder="Select type" />
+                  )}
+                </SelectTrigger>
+                <SelectContent
+                  data-grid-cell-editor=""
+                  align="start"
+                  alignOffset={-8}
+                  sideOffset={-8}
+                  className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+                >
+                  {typeOption.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )
           },
         },
@@ -558,7 +619,16 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-            const isSizeEnabled = row.type === "db_Alpha" && !props.readOnly       
+            const isSizeEnabled = row.type === "db_Alpha" && !props.readOnly;
+
+            const isExistingRow = row.fieldId !== undefined
+            if (isExistingRow) {
+              return (
+                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
+                  {row.size || "—"}
+                </span>
+              )
+            }
             return (
               <Input
                 type="number"
@@ -597,62 +667,67 @@ const ManageFields = () => {
             const options = subtypeOptionsByType[row.type] ?? []
             const displaylabel =
               options.find((o) => o.value === row.subtype)?.label ?? ""
+            const isExistingRow = row.fieldId !== undefined
+            if (isExistingRow) {
+              return (
+                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+                  {displaylabel}
+                </span>
+              )
+            }
             return (
-              // <Select
-              //   value={row.subtype ?? ""}
-              //   disabled={!options.length || props.readOnly}
-              //   onOpenChange={(open) => {
-              //     if (open && !props.readOnly) {
-              //       props.tableMeta?.onCellEditingStart?.(
-              //         props.rowIndex,
-              //         props.columnId
-              //       )
-              //     } else {
-              //       props.tableMeta?.onCellEditingStop?.()
-              //     }
-              //   }}
-              //   onValueChange={(value) => {
-              //     props.tableMeta?.onDataUpdate?.({
-              //       rowIndex: props.rowIndex,
-              //       columnId: props.columnId,
-              //       value,
-              //     })
-              //   }}
-              // >
-              //   <SelectTrigger
-              //     size="sm"
-              //     className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
-              //     onClick={(e) => e.stopPropagation()}
-              //     onPointerDown={(e) => e.stopPropagation()}
-              //   >
-              //     {displayLabel ? (
-              //       <Badge
-              //         variant="secondary"
-              //         className="px-1.5 py-px whitespace-pre-wrap"
-              //       >
-              //         <SelectValue placeholder="Select subtype" />
-              //       </Badge>
-              //     ) : (
-              //       <SelectValue placeholder="—" />
-              //     )}
-              //   </SelectTrigger>
-              //   <SelectContent
-              //     data-grid-cell-editor=""
-              //     align="start"
-              //     alignOffset={-8}
-              //     sideOffset={-8}
-              //     className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
-              //   >
-              //     {options.map((option) => (
-              //       <SelectItem key={option.value} value={option.value}>
-              //         {option.label}
-              //       </SelectItem>
-              //     ))}
-              //   </SelectContent>
-              // </Select>
-              <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-                {displaylabel}
-              </span>
+              <Select
+                value={row.subtype ?? ""}
+                disabled={!options.length || props.readOnly}
+                onOpenChange={(open) => {
+                  if (open && !props.readOnly) {
+                    props.tableMeta?.onCellEditingStart?.(
+                      props.rowIndex,
+                      props.columnId
+                    )
+                  } else {
+                    props.tableMeta?.onCellEditingStop?.()
+                  }
+                }}
+                onValueChange={(value) => {
+                  props.tableMeta?.onDataUpdate?.({
+                    rowIndex: props.rowIndex,
+                    columnId: props.columnId,
+                    value,
+                  })
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {displaylabel ? (
+                    <Badge
+                      variant="secondary"
+                      className="px-1.5 py-px whitespace-pre-wrap"
+                    >
+                      <SelectValue placeholder="Select subtype" />
+                    </Badge>
+                  ) : (
+                    <SelectValue placeholder="—" />
+                  )}
+                </SelectTrigger>
+                <SelectContent
+                  data-grid-cell-editor=""
+                  align="start"
+                  alignOffset={-8}
+                  sideOffset={-8}
+                  className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+                >
+                  {options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )
           },
         },
