@@ -295,20 +295,7 @@ const Create = () => {
         header: "Type",
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
-            // variant: "select",
-            // placeholder: "select type",
-            // options: [
-            //   { label: "Text", value: "db_Alpha" },
-            //   { label: "Long Text", value: "db_Memo" },
-            //   { label: "Integer", value: "db_numeric" },
-            //   { label: "Decimal", value: "db_float" },
-            //   { label: "Date", value: "date" },
-            // ],
-
             const row = props.cell.row.original
-            // if (row.default) {
-            //   row.default = ""
-            // }
             return (
               <Select
                 value={row.type ?? ""}
