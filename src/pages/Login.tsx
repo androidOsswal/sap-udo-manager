@@ -79,6 +79,43 @@ const getLoginErrorMessage = (error: unknown) => {
 const Login = () => {
   const navigate = useNavigate()
 
+  // const loginMutation = useMutation({
+  //   mutationFn: async (values: LoginFormValues) => {
+  //     const baseUrl = normalizeBaseUrl(values.url)
+
+  //     const response = await axios.post<LoginResponse>(
+  //       `${baseUrl}/b1s/v1/Login`,
+  //       {
+  //         CompanyDB: values.database,
+  //         UserName: values.username,
+  //         Password: values.password,
+  //       },
+  //       {
+  //         withCredentials: true,
+  //       }
+  //     )
+  //     await backgroundSapLogin()
+
+  //     return response.data
+  //   },
+  //   onSuccess: (data, values) => {
+  //     const token = data.SessionId
+
+  //     if (token) {
+  //       saveCookie("B1SESSION", token)
+  //     }
+  //     localStorage.setItem(
+  //       "user-details",
+  //       JSON.stringify({
+  //         url: normalizeBaseUrl(values.url),
+  //         database: values.database,
+  //         username: values.username,
+  //       })
+  //     )
+
+  //     navigate("/")
+  //   },
+  // })
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
       const baseUrl = normalizeBaseUrl(values.url)

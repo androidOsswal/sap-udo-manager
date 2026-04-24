@@ -187,3 +187,15 @@ export async function updateTableField(
     payload
   )
 }
+
+
+export async function createTableField(
+  tableName: string,
+  payload: Partial<Omit<UserFieldMD, "FieldID">>
+): Promise<UserFieldMD> {
+  const response = await sapApi.post(`/UserFieldsMD`, {
+    TableName: `@${tableName}`,
+    ...payload,
+  })
+  return response.data // contains FieldID
+}
