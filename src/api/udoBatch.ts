@@ -25,7 +25,7 @@ export type CreateFieldPayload = {
   }>
 }
 
-// 
+//
 const SAP_NUMERIC_SIZE = 11 // db_numeric valid range: 1–11
 
 function getSapType(type: string): string {
@@ -99,6 +99,7 @@ export async function createUdoWithBatch(
     "",
     "POST /b1s/v1/UserTablesMD HTTP/1.1",
     "Content-Type: application/json",
+
     "",
     JSON.stringify(userTablePayload),
   ]
@@ -118,27 +119,42 @@ export async function createUdoWithBatch(
       Name: field.name.trim(),
       Type: getSapType(field.type),
       Description: field.description.trim(),
-      SubType: getSapSubType(field.subType),
-      LinkedTable: getText(field.linkedTable),
-      DefaultValue: getText(field.defaultValue),
       TableName: `@${tableName}`,
       Mandatory: field.mandatory ? "tYES" : "tNO",
-      LinkedUDO: getText(field.linkedUDO),
-      LinkedSystemObject: getText(field.linkedSystemObject),
-      ValidValuesMD: validValues,
     }
 
-    // Only include Size/EditSize when defined 
+    const subType = getSapSubType(field.subType)
+    if (subType) fieldPayload.SubType = subType
+
+    const linkedTable = getText(field.linkedTable)
+    if (linkedTable) fieldPayload.LinkedTable = linkedTable
+
+    const defaultValue = getText(field.defaultValue)
+    if (defaultValue) fieldPayload.DefaultValue = defaultValue
+
+    const linkedUDO = getText(field.linkedUDO)
+    if (linkedUDO) fieldPayload.LinkedUDO = `@${linkedUDO}`
+
+    const linkedSys = getText(field.linkedSystemObject)
+    if (linkedSys) fieldPayload.LinkedSystemObject = linkedSys
+
+    if (validValues.length > 0) {
+      fieldPayload.ValidValuesMD = validValues
+    }
+
+    // Only include Size/EditSize when defined
     if (Size !== undefined) fieldPayload.Size = Size
     if (EditSize !== undefined) fieldPayload.EditSize = EditSize
 
     bodyParts.push(
       `--${changeSetBoundary}`,
+      "",
       "Content-Type: application/http",
       "Content-Transfer-Encoding: binary",
       "",
       "POST /b1s/v1/UserFieldsMD HTTP/1.1",
       "Content-Type: application/json",
+
       "",
       JSON.stringify(fieldPayload)
     )
@@ -148,21 +164,21 @@ export async function createUdoWithBatch(
 
   const body = bodyParts.join("\r\n")
 
-
   const res = await sapApi.post("/$batch", body, {
-  headers: {
-    "Content-Type": `multipart/mixed; boundary=${batchBoundary}`,
-    "Connection": "keep-alive",
-    "Accept": "multipart/mixed",
-  },
-})
-
+    headers: {
+      "Content-Type": `multipart/mixed; boundary=${batchBoundary}`,
+      Connection: "keep-alive",
+      Accept: "multipart/mixed",
+    },
+  })
 
   // Parse batch response for embedded errors and surface them
   const rawResponse: string =
     typeof res.data === "string" ? res.data : JSON.stringify(res.data)
 
-  const errorMatch = rawResponse.match(/"message"\s*:\s*\{[^}]*"value"\s*:\s*"([^"]+)"/)
+  const errorMatch = rawResponse.match(
+    /"message"\s*:\s*\{[^}]*"value"\s*:\s*"([^"]+)"/
+  )
   if (errorMatch) {
     throw new Error(errorMatch[1])
   }

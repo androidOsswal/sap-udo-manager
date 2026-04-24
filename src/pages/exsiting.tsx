@@ -9,7 +9,7 @@ import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyb
 import type { DataGridCellProps } from "@/types/data-grid"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+// import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   fetchUserTables,
   fetchTableFields,
@@ -39,6 +39,7 @@ import {
   CommandEmpty,
   CommandGroup,
 } from "@/components/ui/command"
+import { Plus } from "lucide-react"
 
 export type UserTableMD = {
   TableName: string
@@ -76,16 +77,11 @@ function TableSelectorDialog({
 }: TableSelectionType) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
+  const queryClient = useQueryClient()
 
-  // const { data: userTables = [] } = useQuery({
-  //   queryKey: ["userTables", tableType],
-  //   queryFn: () => fetchUserTables(),
-  // })
-  const { data: userTables = [] } = useQuery({
+  const { data: userTables = [], refetch } = useQuery({
     queryKey: ["userTables", search],
     queryFn: () => fetchUserTables(search),
-    staleTime: 1000 * 60 * 2,
-    gcTime: 1000 * 60 * 5,
   })
 
   return (
@@ -102,7 +98,7 @@ function TableSelectorDialog({
           {mode === "name" ? "Select Table Name" : "Select Description"}
         </DialogTitle>
 
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="-mt-4">
           <CommandInput
             autoFocus
             placeholder={
@@ -116,31 +112,38 @@ function TableSelectorDialog({
             {userTables.length === 0 ? (
               <CommandEmpty>No results found.</CommandEmpty>
             ) : (
-              <CommandGroup>
+              <CommandGroup className="mb-1">
                 {userTables.map((t) => (
                   <CommandItem
                     key={t.TableName}
                     disabled={disable}
                     value={mode === "name" ? t.TableName : t.TableDescription}
                     onSelect={() => {
+                      const selectValue =
+                        mode === "name" ? t.TableName : t.TableDescription
+                      if (selectValue === search) {
+                        refetch()
+                      }
+                      queryClient.invalidateQueries({
+                        queryKey: ["userTables"],
+                      })
                       onSelect(t)
                       setOpen(false)
+                      refetch()
                     }}
                   >
-                    {/* {mode === "name" ? (
-                      <span className="font-medium">{t.TableName}</span>
+                    {mode === "name" ? (
+                      <div className="flex flex-col gap-0.5 py-1">
+                        <span className="font-medium">{t.TableName}</span>
+                        <span className="text-xs text-zinc-500">
+                          {t.TableDescription || "No description"}
+                        </span>
+                      </div>
                     ) : (
                       <span className="font-medium">
                         {t.TableDescription || "No description"}
                       </span>
                     )}
-                 */}
-                    <div className="flex flex-col gap-0.5 py-1">
-                      <span className="font-medium">{t.TableName}</span>
-                      <span className="text-xs text-zinc-500">
-                        {t.TableDescription || "No description"}
-                      </span>
-                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -596,61 +599,64 @@ const ManageFields = () => {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
             const options = subtypeOptionsByType[row.type] ?? []
-            const displayLabel =
+            const displaylabel =
               options.find((o) => o.value === row.subtype)?.label ?? ""
             return (
-              <Select
-                value={row.subtype ?? ""}
-                disabled={!options.length || props.readOnly}
-                onOpenChange={(open) => {
-                  if (open && !props.readOnly) {
-                    props.tableMeta?.onCellEditingStart?.(
-                      props.rowIndex,
-                      props.columnId
-                    )
-                  } else {
-                    props.tableMeta?.onCellEditingStop?.()
-                  }
-                }}
-                onValueChange={(value) => {
-                  props.tableMeta?.onDataUpdate?.({
-                    rowIndex: props.rowIndex,
-                    columnId: props.columnId,
-                    value,
-                  })
-                }}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  {displayLabel ? (
-                    <Badge
-                      variant="secondary"
-                      className="px-1.5 py-px whitespace-pre-wrap"
-                    >
-                      <SelectValue placeholder="Select subtype" />
-                    </Badge>
-                  ) : (
-                    <SelectValue placeholder="—" />
-                  )}
-                </SelectTrigger>
-                <SelectContent
-                  data-grid-cell-editor=""
-                  align="start"
-                  alignOffset={-8}
-                  sideOffset={-8}
-                  className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
-                >
-                  {options.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              // <Select
+              //   value={row.subtype ?? ""}
+              //   disabled={!options.length || props.readOnly}
+              //   onOpenChange={(open) => {
+              //     if (open && !props.readOnly) {
+              //       props.tableMeta?.onCellEditingStart?.(
+              //         props.rowIndex,
+              //         props.columnId
+              //       )
+              //     } else {
+              //       props.tableMeta?.onCellEditingStop?.()
+              //     }
+              //   }}
+              //   onValueChange={(value) => {
+              //     props.tableMeta?.onDataUpdate?.({
+              //       rowIndex: props.rowIndex,
+              //       columnId: props.columnId,
+              //       value,
+              //     })
+              //   }}
+              // >
+              //   <SelectTrigger
+              //     size="sm"
+              //     className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+              //     onClick={(e) => e.stopPropagation()}
+              //     onPointerDown={(e) => e.stopPropagation()}
+              //   >
+              //     {displayLabel ? (
+              //       <Badge
+              //         variant="secondary"
+              //         className="px-1.5 py-px whitespace-pre-wrap"
+              //       >
+              //         <SelectValue placeholder="Select subtype" />
+              //       </Badge>
+              //     ) : (
+              //       <SelectValue placeholder="—" />
+              //     )}
+              //   </SelectTrigger>
+              //   <SelectContent
+              //     data-grid-cell-editor=""
+              //     align="start"
+              //     alignOffset={-8}
+              //     sideOffset={-8}
+              //     className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+              //   >
+              //     {options.map((option) => (
+              //       <SelectItem key={option.value} value={option.value}>
+              //         {option.label}
+              //       </SelectItem>
+              //     ))}
+              //   </SelectContent>
+              // </Select>
+              <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+                {displaylabel}
+              </span>
             )
           },
         },
@@ -856,6 +862,21 @@ const ManageFields = () => {
             const isMandatory = row.mandatory === true
 
             return (
+              // <Input
+              //   value={row.default ?? ""}
+              //   disabled={props.readOnly}
+              //   placeholder="—"
+              //   className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+              //   onChange={(e) => {
+              //     props.tableMeta?.onDataUpdate?.({
+              //       rowIndex: props.rowIndex,
+              //       columnId: props.columnId,
+              //       value: e.target.value,
+              //     })
+              //   }}
+              //   onClick={(e) => e.stopPropagation()}
+              //   onMouseDown={(e) => e.stopPropagation()}
+              // />
               <Input
                 value={row.default ?? ""}
                 disabled={!isMandatory || props.readOnly}
@@ -869,7 +890,7 @@ const ManageFields = () => {
                   })
                 }}
                 onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -935,7 +956,6 @@ const ManageFields = () => {
         ? row.subtype
         : getDefaultSubtype(row.type)
       const isCheckboxSubtype = nextSubtype === "st_Checkbox"
-
       return {
         ...row,
         size:
@@ -1050,8 +1070,12 @@ const ManageFields = () => {
             Loading fields...
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-zinc-400">
-            No fields found for this table.
+          <div className="flex flex-col items-center justify-center py-16 text-sm text-zinc-400">
+            <span>No fields found for this table.</span>
+            <Button onClick={onRowAdd} className="mt-3 w-40 rounded-sm">
+              <Plus />
+              Add Row
+            </Button>
           </div>
         ) : (
           <div className="p-3 sm:p-5">
