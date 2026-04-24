@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   fetchUserTables,
   fetchTableFields,
@@ -38,6 +38,7 @@ import {
   CommandEmpty,
   CommandGroup,
 } from "@/components/ui/command"
+import { Plus } from "lucide-react"
 
 export type UserTableMD = {
   TableName: string
@@ -75,14 +76,13 @@ function TableSelectorDialog({
 }: TableSelectionType) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
+  const queryClient = useQueryClient()
 
-  // const { data: userTables = [] } = useQuery({
-  //   queryKey: ["userTables", tableType],
-  //   queryFn: () => fetchUserTables(),
-  // })
-  const { data: userTables = [] } = useQuery({
+  const { data: userTables = [], refetch } = useQuery({
     queryKey: ["userTables", search],
     queryFn: () => fetchUserTables(search),
+    staleTime: 1000 * 60 * 2, // 1 minutes
+    gcTime: 1000 * 60 * 5,
   })
 
   return (
@@ -99,7 +99,7 @@ function TableSelectorDialog({
           {mode === "name" ? "Select Table Name" : "Select Description"}
         </DialogTitle>
 
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="-mt-4">
           <CommandInput
             autoFocus
             placeholder={
@@ -113,19 +113,33 @@ function TableSelectorDialog({
             {userTables.length === 0 ? (
               <CommandEmpty>No results found.</CommandEmpty>
             ) : (
-              <CommandGroup>
+              <CommandGroup className="mb-1">
                 {userTables.map((t) => (
                   <CommandItem
                     key={t.TableName}
                     disabled={disable}
                     value={mode === "name" ? t.TableName : t.TableDescription}
                     onSelect={() => {
+                      const selectValue =
+                        mode === "name" ? t.TableName : t.TableDescription
+                      if (selectValue === search) {
+                        refetch()
+                      }
+                      queryClient.invalidateQueries({
+                        queryKey: ["userTables"],
+                      })
                       onSelect(t)
                       setOpen(false)
+                      refetch()
                     }}
                   >
                     {mode === "name" ? (
-                      <span className="font-medium">{t.TableName}</span>
+                      <div className="flex flex-col shadow-accent">
+                        <span className="font-medium">{t.TableName}</span>
+                        <span className="font-xs text-zinc-500">
+                          {t.TableDescription || "No Description"}
+                        </span>
+                      </div>
                     ) : (
                       <span className="font-medium">
                         {t.TableDescription || "No description"}
@@ -144,10 +158,6 @@ function TableSelectorDialog({
 
 //constant
 
-const yesNoDefaultOptions = [
-  { label: "Yes", value: "tYES" },
-  { label: "No", value: "tNO" },
-]
 const typeOptionByValue: Record<string, { label?: string; value: string }[]> = {
   db_Alpha: [{ value: "db_Alpha", label: "Text" }],
   db_Memo: [{ value: "db_Memo", label: "Long Text" }],
@@ -268,6 +278,8 @@ const ManageFields = () => {
     queryFn: () => fetchTableFields(selectedTableName),
     enabled:
       !!selectedTableName && !!selectedDescription && !!selectedTableType,
+    staleTime: 1000 * 60 * 2, // 1 minutes
+    gcTime: 1000 * 60 * 5,
   })
 
   //  fetched fields into  rows
@@ -433,61 +445,64 @@ const ManageFields = () => {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
             const options = subtypeOptionsByType[row.type] ?? []
-            const displayLabel =
+            const displaylabel =
               options.find((o) => o.value === row.subtype)?.label ?? ""
             return (
-              <Select
-                value={row.subtype ?? ""}
-                disabled={!options.length || props.readOnly}
-                onOpenChange={(open) => {
-                  if (open && !props.readOnly) {
-                    props.tableMeta?.onCellEditingStart?.(
-                      props.rowIndex,
-                      props.columnId
-                    )
-                  } else {
-                    props.tableMeta?.onCellEditingStop?.()
-                  }
-                }}
-                onValueChange={(value) => {
-                  props.tableMeta?.onDataUpdate?.({
-                    rowIndex: props.rowIndex,
-                    columnId: props.columnId,
-                    value,
-                  })
-                }}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  {displayLabel ? (
-                    <Badge
-                      variant="secondary"
-                      className="px-1.5 py-px whitespace-pre-wrap"
-                    >
-                      <SelectValue placeholder="Select subtype" />
-                    </Badge>
-                  ) : (
-                    <SelectValue placeholder="—" />
-                  )}
-                </SelectTrigger>
-                <SelectContent
-                  data-grid-cell-editor=""
-                  align="start"
-                  alignOffset={-8}
-                  sideOffset={-8}
-                  className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
-                >
-                  {options.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              // <Select
+              //   value={row.subtype ?? ""}
+              //   disabled={!options.length || props.readOnly}
+              //   onOpenChange={(open) => {
+              //     if (open && !props.readOnly) {
+              //       props.tableMeta?.onCellEditingStart?.(
+              //         props.rowIndex,
+              //         props.columnId
+              //       )
+              //     } else {
+              //       props.tableMeta?.onCellEditingStop?.()
+              //     }
+              //   }}
+              //   onValueChange={(value) => {
+              //     props.tableMeta?.onDataUpdate?.({
+              //       rowIndex: props.rowIndex,
+              //       columnId: props.columnId,
+              //       value,
+              //     })
+              //   }}
+              // >
+              //   <SelectTrigger
+              //     size="sm"
+              //     className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+              //     onClick={(e) => e.stopPropagation()}
+              //     onPointerDown={(e) => e.stopPropagation()}
+              //   >
+              //     {displayLabel ? (
+              //       <Badge
+              //         variant="secondary"
+              //         className="px-1.5 py-px whitespace-pre-wrap"
+              //       >
+              //         <SelectValue placeholder="Select subtype" />
+              //       </Badge>
+              //     ) : (
+              //       <SelectValue placeholder="—" />
+              //     )}
+              //   </SelectTrigger>
+              //   <SelectContent
+              //     data-grid-cell-editor=""
+              //     align="start"
+              //     alignOffset={-8}
+              //     sideOffset={-8}
+              //     className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+              //   >
+              //     {options.map((option) => (
+              //       <SelectItem key={option.value} value={option.value}>
+              //         {option.label}
+              //       </SelectItem>
+              //     ))}
+              //   </SelectContent>
+              // </Select>
+              <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+                {displaylabel}
+              </span>
             )
           },
         },
@@ -589,9 +604,6 @@ const ManageFields = () => {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
 
-            if (!row.mandatory) {
-              row.default = ""
-            }
             const validValueOptions =
               row.value
                 ?.map((item) => ({
@@ -600,17 +612,19 @@ const ManageFields = () => {
                 }))
                 .filter((item) => item.label.trim() && item.value.trim()) ?? []
 
-            const options = row.mandatory
-              ? yesNoDefaultOptions
-              : validValueOptions
-            const displayLabel =
-              options.find((o) => o.value === row.default)?.label ?? ""
+            // const options = row.mandatory
+            //   ? validValueOptions
+            //   //  yesNoDefaultOptions
+            //   : ''
+            //   // validValueOptions
+            const defaultOptions =
+              validValueOptions.length > 0 ? validValueOptions : null
 
-            if (row.mandatory || validValueOptions.length > 0) {
+            if (validValueOptions.length > 0) {
               return (
                 <Select
                   value={row.default ?? ""}
-                  disabled={!options.length || props.readOnly}
+                  disabled={props.readOnly}
                   onOpenChange={(open) => {
                     if (open && !props.readOnly) {
                       props.tableMeta?.onCellEditingStart?.(
@@ -635,7 +649,7 @@ const ManageFields = () => {
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
-                    {displayLabel ? (
+                    {defaultOptions ? (
                       <Badge
                         variant="secondary"
                         className="px-1.5 py-px whitespace-pre-wrap"
@@ -653,7 +667,7 @@ const ManageFields = () => {
                     sideOffset={-8}
                     className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
                   >
-                    {options.map((option) => (
+                    {validValueOptions?.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -664,11 +678,34 @@ const ManageFields = () => {
             }
 
             return (
+              // <Input
+              //   value={row.default ?? ""}
+              //   disabled={props.readOnly}
+              //   placeholder="—"
+              //   className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+              //   onChange={(e) => {
+              //     props.tableMeta?.onDataUpdate?.({
+              //       rowIndex: props.rowIndex,
+              //       columnId: props.columnId,
+              //       value: e.target.value,
+              //     })
+              //   }}
+              //   onClick={(e) => e.stopPropagation()}
+              //   onMouseDown={(e) => e.stopPropagation()}
+              // />
               <Input
                 value={row.default ?? ""}
-                disabled={props.readOnly}
-                placeholder="—"
-                className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+                placeholder="Enter default Value"
+                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(
+                    props.rowIndex,
+                    "default"
+                  )
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
                 onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
@@ -677,7 +714,7 @@ const ManageFields = () => {
                   })
                 }}
                 onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -688,7 +725,7 @@ const ManageFields = () => {
     []
   )
 
-const onRowAdd = React.useCallback(() => {
+  const onRowAdd = React.useCallback(() => {
     let newIndex = 0
     setRows((currentRows) => {
       newIndex = currentRows.length
@@ -713,11 +750,8 @@ const onRowAdd = React.useCallback(() => {
         row.value
           ?.map((item) => item.key || item.value)
           .filter((v): v is string => Boolean(v?.trim())) ?? []
-      const defaultOptions = row.mandatory
-        ? ["tYES", "tNO"]
-        : validValueDefaultOptions.length > 0
-          ? validValueDefaultOptions
-          : null
+      const defaultOptions =
+        validValueDefaultOptions.length > 0 ? validValueDefaultOptions : null
       const hasValidDefault =
         !defaultOptions || !row.default || defaultOptions.includes(row.default)
       return {
@@ -784,7 +818,7 @@ const onRowAdd = React.useCallback(() => {
                 setSelectedTableName(t.TableName)
                 setSelectedDescription(t.TableDescription ?? "")
                 setSelectedTableType(t.TableType)
-                setRows([])
+                // setRows([])
               }}
             />
           </div>
@@ -799,7 +833,7 @@ const onRowAdd = React.useCallback(() => {
               onSelect={(t) => {
                 setSelectedDescription(t.TableDescription ?? "")
                 setSelectedTableName(t.TableName)
-                setRows([])
+                // setRows([])
               }}
             />
           </div>
@@ -809,7 +843,7 @@ const onRowAdd = React.useCallback(() => {
               value={selectedTableType}
               onValueChange={(val) => {
                 setSelectedTableType(val)
-                setRows([]) // reset when changed
+                // setRows([]) // reset when changed
               }}
               disabled
             >
@@ -834,8 +868,9 @@ const onRowAdd = React.useCallback(() => {
             Loading fields...
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-zinc-400">
-            No fields found for this table.
+          <div className="flex flex-col items-center justify-center py-16 text-sm text-zinc-400">
+            <span>No fields found for this table.</span>
+            <Button onClick={onRowAdd} className="mt-3 w-40 rounded-sm"><Plus />Add Row</Button>
           </div>
         ) : (
           <div className="p-3 sm:p-5">

@@ -37,7 +37,7 @@ export type UserTableMD = {
 export async function fetchUserTables(search = ""): Promise<UserTableMD[]> {
   const params: Record<string, string | number> = {
     $select: "TableName,TableDescription,TableType",
-    $top: 100, // increase limit
+    $top: 500, // increase limit
     $skip: 0,
   }
 
