@@ -9,7 +9,7 @@ import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyb
 import type { DataGridCellProps } from "@/types/data-grid"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+// import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -165,6 +165,10 @@ function TableSelectorDialog({
 
 //constant
 
+// const yesNoDefaultOptions = [
+//   { label: "Yes", value: "tYES" },
+//   { label: "No", value: "tNO" },
+// ]
 const typeOptionByValue: Record<string, { label?: string; value: string }[]> = {
   db_Alpha: [{ value: "db_Alpha", label: "Text" }],
   db_Memo: [{ value: "db_Memo", label: "Long Text" }],
@@ -821,6 +825,108 @@ const ManageFields = () => {
         header: "Mandatory",
         meta: { cell: { variant: "checkbox" } },
       },
+      // {
+      //   id: "default",
+      //   accessorKey: "default",
+      //   header: "Default",
+      //   meta: {
+      //     customCell: (props: DataGridCellProps<TableRow>) => {
+      //       const row = props.cell.row.original
+
+      //       if (!row.mandatory) {
+      //         row.default = ""
+      //       }
+      //       const validValueOptions =
+      //         row.value
+      //           ?.map((item) => ({
+      //             label: item.value || item.key,
+      //             value: item.key || item.value,
+      //           }))
+      //           .filter((item) => item.label.trim() && item.value.trim()) ?? []
+
+      //       const options = row.mandatory
+      //         ? yesNoDefaultOptions
+      //         : validValueOptions
+      //       const displayLabel =
+      //         options.find((o) => o.value === row.default)?.label ?? ""
+
+      //       if (row.mandatory || validValueOptions.length > 0) {
+      //         return (
+      //           <Select
+      //             value={row.default ?? ""}
+      //             disabled={!options.length || props.readOnly}
+      //             onOpenChange={(open) => {
+      //               if (open && !props.readOnly) {
+      //                 props.tableMeta?.onCellEditingStart?.(
+      //                   props.rowIndex,
+      //                   props.columnId
+      //                 )
+      //               } else {
+      //                 props.tableMeta?.onCellEditingStop?.()
+      //               }
+      //             }}
+      //             onValueChange={(value) => {
+      //               props.tableMeta?.onDataUpdate?.({
+      //                 rowIndex: props.rowIndex,
+      //                 columnId: props.columnId,
+      //                 value,
+      //               })
+      //             }}
+      //           >
+      //             <SelectTrigger
+      //               size="sm"
+      //               className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+      //               onClick={(e) => e.stopPropagation()}
+      //               onPointerDown={(e) => e.stopPropagation()}
+      //             >
+      //               {displayLabel ? (
+      //                 <Badge
+      //                   variant="secondary"
+      //                   className="px-1.5 py-px whitespace-pre-wrap"
+      //                 >
+      //                   <SelectValue placeholder="Select default" />
+      //                 </Badge>
+      //               ) : (
+      //                 <SelectValue placeholder="—" />
+      //               )}
+      //             </SelectTrigger>
+      //             <SelectContent
+      //               data-grid-cell-editor=""
+      //               align="start"
+      //               alignOffset={-8}
+      //               sideOffset={-8}
+      //               className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+      //             >
+      //               {options.map((option) => (
+      //                 <SelectItem key={option.value} value={option.value}>
+      //                   {option.label}
+      //                 </SelectItem>
+      //               ))}
+      //             </SelectContent>
+      //           </Select>
+      //         )
+      //       }
+
+      //       return (
+      //         <Input
+      //           value={row.default ?? ""}
+      //           disabled={props.readOnly}
+      //           placeholder="—"
+      //           className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+      //           onChange={(e) => {
+      //             props.tableMeta?.onDataUpdate?.({
+      //               rowIndex: props.rowIndex,
+      //               columnId: props.columnId,
+      //               value: e.target.value,
+      //             })
+      //           }}
+      //           onClick={(e) => e.stopPropagation()}
+      //           onMouseDown={(e) => e.stopPropagation()}
+      //         />
+      //       )
+      //     },
+      //   },
+      // },
       {
         id: "default",
         accessorKey: "default",
@@ -828,79 +934,7 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-
-            const validValueOptions =
-              row.value
-                ?.map((item) => ({
-                  label: item.value || item.key,
-                  value: item.key || item.value,
-                }))
-                .filter((item) => item.label.trim() && item.value.trim()) ?? []
-
-            // const options = row.mandatory
-            //   ? validValueOptions
-            //   //  yesNoDefaultOptions
-            //   : ''
-            //   // validValueOptions
-            const defaultOptions =
-              validValueOptions.length > 0 ? validValueOptions : null
-
-            if (validValueOptions.length > 0) {
-              return (
-                <Select
-                  value={row.default ?? ""}
-                  disabled={props.readOnly}
-                  onOpenChange={(open) => {
-                    if (open && !props.readOnly) {
-                      props.tableMeta?.onCellEditingStart?.(
-                        props.rowIndex,
-                        props.columnId
-                      )
-                    } else {
-                      props.tableMeta?.onCellEditingStop?.()
-                    }
-                  }}
-                  onValueChange={(value) => {
-                    props.tableMeta?.onDataUpdate?.({
-                      rowIndex: props.rowIndex,
-                      columnId: props.columnId,
-                      value,
-                    })
-                  }}
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    {defaultOptions ? (
-                      <Badge
-                        variant="secondary"
-                        className="px-1.5 py-px whitespace-pre-wrap"
-                      >
-                        <SelectValue placeholder="Select default" />
-                      </Badge>
-                    ) : (
-                      <SelectValue placeholder="—" />
-                    )}
-                  </SelectTrigger>
-                  <SelectContent
-                    data-grid-cell-editor=""
-                    align="start"
-                    alignOffset={-8}
-                    sideOffset={-8}
-                    className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
-                  >
-                    {validValueOptions?.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )
-            }
+            const isMandatory = row.mandatory === true
 
             return (
               // <Input
@@ -920,17 +954,9 @@ const ManageFields = () => {
               // />
               <Input
                 value={row.default ?? ""}
-                placeholder="Enter default Value"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
-                onFocus={() => {
-                  props.tableMeta?.onCellEditingStart?.(
-                    props.rowIndex,
-                    "default"
-                  )
-                }}
-                onBlur={() => {
-                  props.tableMeta?.onCellEditingStop?.()
-                }}
+                disabled={!isMandatory || props.readOnly}
+                placeholder={isMandatory ? "Enter default value" : "—"}
+                className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
                 onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
@@ -946,7 +972,7 @@ const ManageFields = () => {
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     []
   )
 
@@ -962,6 +988,40 @@ const ManageFields = () => {
     }
   }, [])
 
+  // const handleDataChange = React.useCallback((data: TableRow[]) => {
+  //   const updated = data.map((row) => {
+  //     const subtypeOptions = subtypeOptionsByType[row.type] ?? []
+  //     const hasValidSubtype =
+  //       !!row.subtype && subtypeOptions.some((o) => o.value === row.subtype)
+  //     const nextSubtype = hasValidSubtype
+  //       ? row.subtype
+  //       : getDefaultSubtype(row.type)
+  //     const isCheckboxSubtype = nextSubtype === "st_Checkbox"
+  //     const validValueDefaultOptions =
+  //       row.value
+  //         ?.map((item) => item.key || item.value)
+  //         .filter((v): v is string => Boolean(v?.trim())) ?? []
+  //     const defaultOptions = row.mandatory
+  //       ? ["tYES", "tNO"]
+  //       : validValueDefaultOptions.length > 0
+  //         ? validValueDefaultOptions
+  //         : null
+  //     const hasValidDefault =
+  //       !defaultOptions || !row.default || defaultOptions.includes(row.default)
+  //     return {
+  //       ...row,
+  //       size:
+  //         row.type === "db_Alpha" && typeof row.size === "number"
+  //           ? Math.min(Math.max(row.size, 1), 254)
+  //           : undefined,
+  //       subtype: nextSubtype,
+  //       value: isCheckboxSubtype ? [] : row.value,
+  //       default: hasValidDefault ? row.default : "",
+  //     }
+  //   })
+  //   setRows(updated)
+  // }, [])
+
   const handleDataChange = React.useCallback((data: TableRow[]) => {
     const updated = data.map((row) => {
       const subtypeOptions = subtypeOptionsByType[row.type] ?? []
@@ -971,14 +1031,6 @@ const ManageFields = () => {
         ? row.subtype
         : getDefaultSubtype(row.type)
       const isCheckboxSubtype = nextSubtype === "st_Checkbox"
-      const validValueDefaultOptions =
-        row.value
-          ?.map((item) => item.key || item.value)
-          .filter((v): v is string => Boolean(v?.trim())) ?? []
-      const defaultOptions =
-        validValueDefaultOptions.length > 0 ? validValueDefaultOptions : null
-      const hasValidDefault =
-        !defaultOptions || !row.default || defaultOptions.includes(row.default)
       return {
         ...row,
         size:
@@ -987,7 +1039,7 @@ const ManageFields = () => {
             : undefined,
         subtype: nextSubtype,
         value: isCheckboxSubtype ? [] : row.value,
-        default: hasValidDefault ? row.default : "",
+        default: row.mandatory ? row.default : "",
       }
     })
     setRows(updated)
