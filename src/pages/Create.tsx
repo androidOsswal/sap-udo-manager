@@ -42,10 +42,7 @@ type TableRow = {
   enable?: boolean
 }
 
-const yesNoDefaultOptions = [
-  { label: "Yes", value: "tYES" },
-  { label: "No", value: "tNO" },
-]
+
 
 const tableTypeByTab = {
   header: "bott_Document",
@@ -85,7 +82,8 @@ function getDefaultSubtype(type: string) {
     return options.find((option) => option.value === "st_sum")?.value ?? ""
   }
 
-  return options.find((option) => option.value === "st_none")?.value ?? ""
+  // return options.find((option) => option.value === "st_none")?.value ?? ""
+  return ''
 }
 
 function createEmptyRow(): TableRow {
@@ -308,6 +306,9 @@ const Create = () => {
             // ],
 
             const row = props.cell.row.original
+            // if (row.default) {
+            //   row.default = ""
+            // }
             return (
               <Select
                 value={row.type ?? ""}
@@ -323,6 +324,7 @@ const Create = () => {
                   }
                 }}
                 onValueChange={(value) => {
+                  row.default = ""
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: props.columnId,
@@ -417,6 +419,10 @@ const Create = () => {
             const displayLabel =
               options.find((option) => option.value === row.subtype)?.label ??
               ""
+
+            // if (row.default) {
+            //   row.default = ""
+            // }
             return (
               <Select
                 value={row.subtype ?? ""}
@@ -432,6 +438,7 @@ const Create = () => {
                   }
                 }}
                 onValueChange={(value) => {
+                  row.default = ""
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: props.columnId,
@@ -595,7 +602,7 @@ const Create = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-            console.log(row.value)
+            console.log(row.default)
 
             const validValueOptions =
               row.value
@@ -605,9 +612,9 @@ const Create = () => {
                 }))
                 .filter((item) => item.label.trim() && item.value.trim()) ?? []
 
-            const options =
-              yesNoDefaultOptions.length > 0 ? validValueOptions : null
-
+            // const options =
+            //   yesNoDefaultOptions.length > 0 ? validValueOptions : null
+            // console.log(props.rowIndex)
             if (validValueOptions.length > 0) {
               return (
                 <Select
@@ -637,16 +644,16 @@ const Create = () => {
                     onClick={(event) => event.stopPropagation()}
                     onPointerDown={(event) => event.stopPropagation()}
                   >
-                    {options ? (
+                    {/* {options ? ( */}
                       <Badge
                         variant="secondary"
                         className="px-1.5 py-px whitespace-pre-wrap"
                       >
                         <SelectValue placeholder="Select default" />
                       </Badge>
-                    ) : (
+                    {/* ) : (
                       <SelectValue placeholder="Select default" />
-                    )}
+                    )} */}
                   </SelectTrigger>
                   <SelectContent
                     data-grid-cell-editor=""
@@ -668,18 +675,26 @@ const Create = () => {
             return (
               <Input
                 value={row.default ?? ""}
-                disabled={props.readOnly}
-                placeholder="Enter default"
-                className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
-                onChange={(event) => {
+                placeholder="Enter default Value"
+                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(
+                    props.rowIndex,
+                    "default"
+                  )
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
+                onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: props.columnId,
-                    value: event.target.value,
+                    value: e.target.value,
                   })
                 }}
-                onClick={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             )
           },
@@ -712,13 +727,11 @@ const Create = () => {
           : getDefaultSubtype(row.type)
 
         // const isCheckbox = subtype === "st_checkbox"
-        const isValidValueAllowed =
-          row.type === "db_Alpha" && subtype !== "st_checkbox";
-
         // const validValues =
-          // row.value?.map((v) => v.key || v.value).filter(Boolean) ?? [];
-
+        // row.value?.map((v) => v.key || v.value).filter(Boolean) ?? [];
         // const defaultOptions = validValues.length > 0 ? validValues : null
+        const isValidValueAllowed =
+          row.type === "db_Alpha" && subtype !== "st_checkbox"
 
         return {
           ...row,
@@ -728,7 +741,8 @@ const Create = () => {
               : undefined,
           subtype,
           value: isValidValueAllowed ? row.value : [],
-          default: isValidValueAllowed ? row.default : "",
+          // default: isValidValueAllowed ? row.default : "",
+          default: row.default,
           // value: isCheckbox ? [] : row.value,
           // default:
           //   !defaultOptions || defaultOptions.includes(row.default!)

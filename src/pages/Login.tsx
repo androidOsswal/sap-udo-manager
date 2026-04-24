@@ -31,10 +31,6 @@ const normalizeBaseUrl = (url: string) => {
 //     value
 //   )}; path=/; max-age=86400; SameSite=Lax`
 // }
-// const saveCookie = (name: string, value: string, maxAge = 3600) => {
-//   const secure = window.location.protocol === "https:" ? "Secure;" : ""
-//   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax; ${secure}`
-// }
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, "Username is required"),
@@ -159,7 +155,7 @@ const Login = () => {
       navigate("/")
     },
     onError: (err) => {
-      console.error(" MUTATION ERROR:", err)
+      console.error("❌ MUTATION ERROR:", err)
     },
   })
 

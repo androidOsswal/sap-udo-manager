@@ -22,6 +22,7 @@ import {
   fetchUserTables,
   fetchTableFields,
   updateTableField,
+  createTableField,
 } from "@/api/userTableMD"
 import {
   Dialog,
@@ -81,8 +82,6 @@ function TableSelectorDialog({
   const { data: userTables = [], refetch } = useQuery({
     queryKey: ["userTables", search],
     queryFn: () => fetchUserTables(search),
-    staleTime: 1000 * 60 * 2, // 1 minutes
-    gcTime: 1000 * 60 * 5,
   })
 
   return (
@@ -134,10 +133,10 @@ function TableSelectorDialog({
                     }}
                   >
                     {mode === "name" ? (
-                      <div className="flex flex-col shadow-accent">
+                      <div className="flex flex-col gap-0.5 py-1">
                         <span className="font-medium">{t.TableName}</span>
-                        <span className="font-xs text-zinc-500">
-                          {t.TableDescription || "No Description"}
+                        <span className="text-xs text-zinc-500">
+                          {t.TableDescription || "No description"}
                         </span>
                       </div>
                     ) : (
@@ -163,7 +162,7 @@ const typeOptionByValue: Record<string, { label?: string; value: string }[]> = {
   db_Memo: [{ value: "db_Memo", label: "Long Text" }],
   db_Numeric: [{ value: "db_Numeric", label: "Integer" }],
   db_Float: [{ value: "db_Float", label: "Decimal" }],
-  db_date: [{ value: "db_date", label: "Date" }],
+  db_Date: [{ value: "db_Date", label: "Date" }],
 }
 const subtypeOptionsByType: Record<string, { label: string; value: string }[]> =
   {
@@ -245,6 +244,36 @@ function mapRowToPayload(row: TableRow) {
   }
 }
 
+function mapRowToCreatePayload(row: TableRow) {
+  const validValues =
+    row.value
+      ?.map((item) => ({
+        Value: String(item.key ?? "").trim(),
+        Description: String(item.value ?? "").trim(),
+      }))
+      .filter((v) => v.Value && v.Description) ?? []
+
+  const mandatoryValue: "tYES" | "tNO" = row.mandatory ? "tYES" : "tNO"
+
+  return {
+    Name: row.name.trim(),
+    Description: row.description.trim(),
+    Type: row.type,
+    SubType: row.subtype ?? "",
+    Size:
+      row.type === "db_Alpha"
+        ? Math.min(Math.max(row.size ?? 1, 1), 254)
+        : row.type === "db_Numeric"
+          ? 11
+          : undefined,
+    DefaultValue: row.default?.trim() || null,
+    Mandatory: mandatoryValue,
+    LinkedUDO: row.linkeUDO?.trim() || null,
+    LinkedSystemObject: row.linkesystemobj?.trim() || null,
+    ValidValuesMD: validValues,
+  }
+}
+
 function createEmptyRow(): TableRow {
   return {
     id: crypto.randomUUID(),
@@ -276,10 +305,10 @@ const ManageFields = () => {
   } = useQuery({
     queryKey: ["tableFields", selectedTableName, selectedTableType],
     queryFn: () => fetchTableFields(selectedTableName),
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 5,
     enabled:
       !!selectedTableName && !!selectedDescription && !!selectedTableType,
-    staleTime: 1000 * 60 * 2, // 1 minutes
-    gcTime: 1000 * 60 * 5,
   })
 
   //  fetched fields into  rows
@@ -296,37 +325,107 @@ const ManageFields = () => {
   const isTableSelected = !!selectedTableName
 
   // Update mutation
+  // const updateMutation = useMutation({
+  //   mutationFn: async (updatedRows: TableRow[]) => {
+  //     const results = await Promise.allSettled(
+  //       updatedRows
+  //         .filter((row) => row.fieldId !== undefined)
+  //         .map((row) =>
+  //           updateTableField(
+  //             selectedTableName,
+  //             row.fieldId!,
+  //             mapRowToPayload(row)
+  //           )
+  //         )
+  //     )
+
+  //     const failures = results.filter((r) => r.status === "rejected")
+  //     if (failures.length > 0) {
+  //       throw new Error(
+  //         `${failures.length} field(s) failed to update. Please try again.`
+  //       )
+  //     }
+  //   },
+  //   onSuccess: () => {
+  //     toast.success("Fields updated successfully.")
+  //   },
+  //   onError: (error: unknown) => {
+  //     toast.error(
+  //       error instanceof Error ? error.message : "Unable to update fields."
+  //     )
+  //   },
+  // })
   const updateMutation = useMutation({
-    mutationFn: async (updatedRows: TableRow[]) => {
-      const results = await Promise.allSettled(
-        updatedRows
-          .filter((row) => row.fieldId !== undefined)
-          .map((row) =>
-            updateTableField(
-              selectedTableName,
-              row.fieldId!,
-              mapRowToPayload(row)
-            )
-          )
+    mutationFn: async (allRows: TableRow[]) => {
+      // Split rows into two groups
+      const existingRows = allRows.filter((row) => row.fieldId !== undefined)
+      const newRows = allRows.filter((row) => row.fieldId === undefined)
+
+      // Build all API calls
+      const updatePromises = existingRows.map((row) =>
+        updateTableField(
+          selectedTableName,
+          row.fieldId!,
+          mapRowToPayload(row)
+        ).then(() => ({ type: "update" as const, row }))
       )
 
-      const failures = results.filter((r) => r.status === "rejected")
-      if (failures.length > 0) {
-        throw new Error(
-          `${failures.length} field(s) failed to update. Please try again.`
+      const createPromises = newRows.map((row) =>
+        createTableField(selectedTableName, mapRowToCreatePayload(row)).then(
+          () => ({
+            type: "create" as const,
+            row,
+          })
         )
+      )
+
+      // Run all in parallel
+      const results = await Promise.allSettled([
+        ...updatePromises,
+        ...createPromises,
+      ])
+
+      // Count success and failures
+      const succeeded = results.filter((r) => r.status === "fulfilled").length
+      const failed = results.filter((r) => r.status === "rejected").length
+
+      return {
+        succeeded,
+        failed,
+        total: results.length,
+        updated: existingRows.length,
+        created: newRows.length,
       }
     },
-    onSuccess: () => {
-      toast.success("Fields updated successfully.")
+    onSuccess: (result) => {
+      if (result.failed === 0) {
+        toast.success(
+          `Saved successfully. Updated: ${result.updated}, Created: ${result.created}`
+        )
+      } else {
+        toast.warning(
+          `Partially saved. Success: ${result.succeeded}, Failed: ${result.failed}`
+        )
+      }
+      // Optionally refetch the data
+      // queryClient.invalidateQueries({ queryKey: ["tableFields", selectedTableName] })
     },
-    onError: (error: unknown) => {
-      toast.error(
-        error instanceof Error ? error.message : "Unable to update fields."
-      )
+    onError: () => {
+      toast.error("Failed to save changes.")
     },
   })
 
+  // const onSubmit = () => {
+  //   if (!selectedTableName) {
+  //     toast.error("Select a table first.")
+  //     return
+  //   }
+  //   if (rows.length === 0) {
+  //     toast.error("No fields to update.")
+  //     return
+  //   }
+  //   updateMutation.mutate(rows)
+  // }
   const onSubmit = () => {
     if (!selectedTableName) {
       toast.error("Select a table first.")
@@ -336,6 +435,16 @@ const ManageFields = () => {
       toast.error("No fields to update.")
       return
     }
+
+    // Validate new rows have required fields
+    const invalidNewRows = rows.filter(
+      (row) => row.fieldId === undefined && !row.description?.trim()
+    )
+    if (invalidNewRows.length > 0) {
+      toast.error("New fields must have a name.")
+      return
+    }
+
     updateMutation.mutate(rows)
   }
 
@@ -348,11 +457,29 @@ const ManageFields = () => {
         accessorKey: "name",
         header: "Name",
         meta: {
-          customCell: (props) => (
-            <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-              {props.cell.row.original.name || "—"}
-            </span>
-          ),
+          // customCell: (props) => (
+          //   <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+          //     {props.cell.row.original.name || "—"}
+          //   </span>
+          // ),
+          customCell: (props) => {
+            const row = props.cell.row.original
+            return (
+              <Input
+                value={row.name ?? ""}
+                placeholder="Enter Name"
+                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                onChange={(e) => {
+                  props.tableMeta?.onDataUpdate?.({
+                    rowIndex: props.rowIndex,
+                    columnId: "name",
+                    value: e.target.value,
+                  })
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )
+          },
         },
       },
       {
@@ -385,14 +512,27 @@ const ManageFields = () => {
         accessorKey: "type",
         header: "Type",
         meta: {
+          // customCell: (props: DataGridCellProps<TableRow>) => {
+          //   const row = props.cell.row.original
+
+          //   const options = typeOptionByValue[row.type]
+
+          //   const displaylabel =
+          //     options?.find((op) => op.value === row.type)?.label ?? ""
+
+          //   return (
+          //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+          //       {displaylabel}
+          //     </span>
+          //   )
+          // },
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
 
             const options = typeOptionByValue[row.type]
 
             const displaylabel =
-              options?.find((op) => op.value === row.type)?.label ?? ""
-
+              options?.find((op) => op.value === row.type)?.label ?? "—"
             return (
               <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
                 {displaylabel}
@@ -870,7 +1010,10 @@ const ManageFields = () => {
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-sm text-zinc-400">
             <span>No fields found for this table.</span>
-            <Button onClick={onRowAdd} className="mt-3 w-40 rounded-sm"><Plus />Add Row</Button>
+            <Button onClick={onRowAdd} className="mt-3 w-40 rounded-sm">
+              <Plus />
+              Add Row
+            </Button>
           </div>
         ) : (
           <div className="p-3 sm:p-5">
