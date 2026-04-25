@@ -9,7 +9,7 @@ import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyb
 import type { DataGridCellProps } from "@/types/data-grid"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-// import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -23,6 +23,7 @@ import {
   fetchTableFields,
   updateTableField,
   createTableField,
+  type UserFieldMD,
 } from "@/api/userTableMD"
 import {
   Dialog,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/command"
 import { Plus } from "lucide-react"
 
+
 export type UserTableMD = {
   TableName: string
   TableDescription: string
@@ -53,6 +55,7 @@ const typeOption = [
   { label: "Decimal", value: "db_float" },
   { label: "Date", value: "date" },
 ]
+const EMPTY_FIELDS: UserFieldMD[] = []
 
 type TableSelectionType = {
   mode: "name" | "description"
@@ -138,6 +141,7 @@ function TableSelectorDialog({
                       onSelect(t)
                       setOpen(false)
                       refetch()
+                      
                     }}
                   >
                     {mode === "name" ? (
@@ -164,7 +168,6 @@ function TableSelectorDialog({
 }
 
 //constant
-
 // const yesNoDefaultOptions = [
 //   { label: "Yes", value: "tYES" },
 //   { label: "No", value: "tNO" },
@@ -311,7 +314,7 @@ const ManageFields = () => {
 
   // fetch fields when a table is selected
   const {
-    data: fetchedFields = [],
+    data: fetchedFields = EMPTY_FIELDS,
     isLoading: isLoadingFields,
     isFetching: isFetchingFields,
   } = useQuery({
@@ -325,13 +328,7 @@ const ManageFields = () => {
 
   //  fetched fields into  rows
   React.useEffect(() => {
-    if (fetchedFields.length > 0) {
-      setRows((prev) => {
-        // prevent unnecessary reset
-        if (prev.length === fetchedFields.length) return prev
-        return fetchedFields.map(mapFieldToRow)
-      })
-    }
+    setRows(fetchedFields.map(mapFieldToRow))
   }, [fetchedFields])
 
   const isTableSelected = !!selectedTableName
@@ -510,15 +507,7 @@ const ManageFields = () => {
         header: "Description",
         meta: {
           customCell: (props) => {
-            const row = props.cell.row.original
-            const isExistingRow = row.fieldId !== undefined
-            if (isExistingRow) {
-              return (
-                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
-                  {row.description || "—"}
-                </span>
-              )
-            }
+            const row = props.cell.row.original    
             return (
               <Input
                 value={row.description ?? ""}
@@ -554,7 +543,7 @@ const ManageFields = () => {
             if (isExistingRow) {
               return (
                 <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
-                  {row.description || "—"}
+                  {displaylabel}
                 </span>
               )
             }
@@ -587,7 +576,7 @@ const ManageFields = () => {
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  {typeOption ? (
+                  {displaylabel ? (
                     <Badge
                       variant="secondary"
                       className="px-1.5 py-px whitespace-pre-wrap"
@@ -1092,10 +1081,10 @@ const ManageFields = () => {
               value={selectedTableName}
               tableType={selectedTableType}
               onSelect={(t: UserTableMD) => {
+                setRows([])
                 setSelectedTableName(t.TableName)
                 setSelectedDescription(t.TableDescription ?? "")
                 setSelectedTableType(t.TableType)
-                // setRows([])
               }}
             />
           </div>
@@ -1108,9 +1097,10 @@ const ManageFields = () => {
               disable
               tableType={selectedTableType}
               onSelect={(t) => {
+                setRows([])
                 setSelectedDescription(t.TableDescription ?? "")
                 setSelectedTableName(t.TableName)
-                // setRows([])
+                setSelectedTableType(t.TableType)
               }}
             />
           </div>
