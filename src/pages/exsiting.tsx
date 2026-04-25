@@ -10,6 +10,7 @@ import type { DataGridCellProps } from "@/types/data-grid"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -31,6 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import LinkedUDOCell from "@/components/LInkedUDO"
 import { toast } from "sonner"
 import {
   Command,
@@ -508,6 +510,15 @@ const ManageFields = () => {
         meta: {
           customCell: (props) => {
             const row = props.cell.row.original    
+            const row = props.cell.row.original
+            // const isExistingRow = row.fieldId !== undefined
+            // if (isExistingRow) {
+            //   return (
+            //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
+            //       {row.description || "—"}
+            //     </span>
+            //   )
+            // }
             return (
               <Input
                 value={row.description ?? ""}
@@ -537,13 +548,15 @@ const ManageFields = () => {
             const options = typeOptionByValue[row.type]
 
             const displaylabel =
-              options?.find((op) => op.value === row.type)?.label ?? "—";
+              options?.find((op) => op.value === row.type)?.label ?? "—"
+            console.log(displaylabel)
 
             const isExistingRow = row.fieldId !== undefined
             if (isExistingRow) {
               return (
                 <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
                   {displaylabel}
+                  {displaylabel || "—"}
                 </span>
               )
             }
@@ -612,16 +625,7 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-            const isSizeEnabled = row.type === "db_Alpha" && !props.readOnly;
-
-            const isExistingRow = row.fieldId !== undefined
-            if (isExistingRow) {
-              return (
-                <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
-                  {row.size || "—"}
-                </span>
-              )
-            }
+            const isSizeEnabled = row.type === "db_Alpha" && !props.readOnly
             return (
               <Input
                 type="number"
@@ -758,12 +762,15 @@ const ManageFields = () => {
         accessorKey: "linkeUDO",
         header: "Linked UDO",
         meta: {
+          // customCell: (props: DataGridCellProps<TableRow>) => {
+          //   return (
+          //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+          //       {props.cell.row.original.linkeUDO || "—"}
+          //     </span>
+          //   )
+          // },
           customCell: (props: DataGridCellProps<TableRow>) => {
-            return (
-              <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-                {props.cell.row.original.linkeUDO || "—"}
-              </span>
-            )
+            return <LinkedUDOCell {...props} />
           },
         },
       },
