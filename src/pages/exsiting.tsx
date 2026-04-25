@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import LinkedUDOCell from "@/components/LInkedUDO"
 import { toast } from "sonner"
 import {
   Command,
@@ -761,12 +762,15 @@ const ManageFields = () => {
         accessorKey: "linkeUDO",
         header: "Linked UDO",
         meta: {
+          // customCell: (props: DataGridCellProps<TableRow>) => {
+          //   return (
+          //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
+          //       {props.cell.row.original.linkeUDO || "—"}
+          //     </span>
+          //   )
+          // },
           customCell: (props: DataGridCellProps<TableRow>) => {
-            return (
-              <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-                {props.cell.row.original.linkeUDO || "—"}
-              </span>
-            )
+            return <LinkedUDOCell {...props} />
           },
         },
       },
