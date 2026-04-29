@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
@@ -71,7 +69,7 @@ function DialogContent({
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-4 right-4 pb-4"
+              className="absolute top-4 right-4"
               size="icon-sm"
             >
               <XIcon
@@ -129,7 +127,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-heading leading-none font-medium", className)}
+      className={cn("leading-none font-medium", className)}
       {...props}
     />
   )

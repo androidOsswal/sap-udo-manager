@@ -96,12 +96,35 @@ import { sapApi } from "./client"
 type LinkedUDOs = {
   TableName: string
   TableDescription: string
+};
+export type UserTableMD = {
+  TableName: string
+  TableDescription: string
+  TableType: "bott_Document" | "bott_DocumentLines"
+};
+
+export type UserFieldMD = {
+  FieldID: number
+  Name: string
+  Description: string
+  Type: string
+  Size?: number
+  SubType?: string
+  LinkedTable?: string | null
+  DefaultValue?: string | null
+  TableName: string
+  tableType: string
+  Mandatory: "tYES" | "tNO"
+  LinkedUDO?: string | null
+  LinkedSystemObject?: string | null
+  ValidValuesMD?: Array<{ Value: string; Description: string }>
 }
+
 
 function escapeODataString(value: string) {
   return value.replaceAll("'", "''")
 }
-
+//get table name and description for linked UDO dropdown..
 export async function fetchLinkedUDO(search = ""): Promise<LinkedUDOs[]> {
   const normalizedSearch = search.trim()
   const params: Record<string, string> = {
@@ -121,16 +144,12 @@ export async function fetchLinkedUDO(search = ""): Promise<LinkedUDOs[]> {
   return Array.isArray(response.data) ? response.data : response.data.value
 }
 
-export type UserTableMD = {
-  TableName: string
-  TableDescription: string
-  TableType: "bott_Document" | "bott_DocumentLines"
-}
+
 
 export async function fetchUserTables(search = ""): Promise<UserTableMD[]> {
   const params: Record<string, string | number> = {
     $select: "TableName,TableDescription,TableType",
-    $top: 500, // increase limit
+    $top: 500, 
     $skip: 0,
   }
 
@@ -144,23 +163,6 @@ export async function fetchUserTables(search = ""): Promise<UserTableMD[]> {
   return res.data?.value ?? []
 }
 
-export type UserFieldMD = {
-  FieldID: number
-  Name: string
-  Description: string
-  Type: string
-  Size?: number
-  SubType?: string
-  LinkedTable?: string | null
-  DefaultValue?: string | null
-  TableName: string
-  tableType: string
-  Mandatory: "tYES" | "tNO"
-  LinkedUDO?: string | null
-  LinkedSystemObject?: string | null
-  ValidValuesMD?: Array<{ Value: string; Description: string }>
-}
-// fetchTableFields(tableName, tableType)
 
 // Fetch all fields for a given table e.g. "@tableName"
 export async function fetchTableFields(
@@ -182,13 +184,17 @@ export async function updateTableField(
   fieldId: number,
   payload: Partial<Omit<UserFieldMD, "FieldID" | "TableName" | "Name">>
 ): Promise<void> {
+
   await sapApi.patch(
+
     `/UserFieldsMD(TableName='@${tableName}',FieldID=${fieldId})`,
     payload
+
   )
+
 }
 
-
+//add a new in existing table
 export async function createTableField(
   tableName: string,
   payload: Partial<Omit<UserFieldMD, "FieldID">>
@@ -197,5 +203,5 @@ export async function createTableField(
     TableName: `@${tableName}`,
     ...payload,
   })
-  return response.data // contains FieldID
+  return response.data 
 }

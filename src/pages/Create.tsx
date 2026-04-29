@@ -22,11 +22,10 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useMutation } from "@tanstack/react-query"
-
-import { createUdoWithBatch } from "@/api/udoBatch"
 import { toast } from "sonner"
-
 import LinkedUDOCell from "@/components/LInkedUDO"
+import { createUdoWithBatchAndLink } from "@/api/udoBatch"
+import { sapApi } from "@/api/client"
 type TableRow = {
   id: string
   name: string
@@ -41,8 +40,6 @@ type TableRow = {
   default?: string
   enable?: boolean
 }
-
-
 
 const tableTypeByTab = {
   header: "bott_Document",
@@ -75,6 +72,9 @@ const subtypeOptionsByType: Record<string, { label: string; value: string }[]> =
     ],
   }
 
+const gridInputClass =
+  "size-full border-none !bg-transparent px-3 py-2 text-sm focus-visible:ring-0 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400"
+
 function getDefaultSubtype(type: string) {
   const options = subtypeOptionsByType[type] ?? []
 
@@ -82,8 +82,8 @@ function getDefaultSubtype(type: string) {
     return options.find((option) => option.value === "st_sum")?.value ?? ""
   }
 
-  // return options.find((option) => option.value === "st_none")?.value ?? ""
-  return ''
+  return options.find((option) => option.value === "st_none")?.value ?? ""
+  // return ""
 }
 
 function createEmptyRow(): TableRow {
@@ -126,6 +126,16 @@ const Create = () => {
   const [activeTab, setActiveTab] = React.useState<"header" | "row">("header")
   const [activeRow, setActiveRow] = React.useState<TableRow | null>(null)
 
+  React.useEffect(() => {
+    localStorage.setItem("tableRows", JSON.stringify(rows))
+  }, [rows])
+
+  React.useEffect(() => {
+    const checkStatus = async () => {
+      await sapApi.get("UserTablesMD")
+    }
+    checkStatus()
+  }, [])
   const tableSchema = z.object({
     tableName: z.string().min(1, "Table name is required"),
     description: z.string().min(1, "Description is required"),
@@ -163,7 +173,8 @@ const Create = () => {
         validValues: Array<{ key: string; value: string }>
       }>
     }) => {
-      return createUdoWithBatch(table, fields)
+      // return createUdoWithBatch(table, fields)
+      return createUdoWithBatchAndLink(table, fields)
     },
     onSuccess: () => {
       toast.success("Table and fields created successfully.")
@@ -232,7 +243,7 @@ const Create = () => {
               <Input
                 value={row.name ?? ""}
                 placeholder="Enter name"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onFocus={() => {
                   props.tableMeta?.onCellEditingStart?.(props.rowIndex, "name")
                 }}
@@ -265,7 +276,7 @@ const Create = () => {
               <Input
                 value={row.description ?? ""}
                 placeholder="Enter description"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onFocus={() => {
                   props.tableMeta?.onCellEditingStart?.(
                     props.rowIndex,
@@ -321,14 +332,14 @@ const Create = () => {
               >
                 <SelectTrigger
                   size="sm"
-                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+                  className="size-full items-center border-none bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
                   {typeOption ? (
                     <Badge
                       variant="secondary"
-                      className="px-1.5 py-px whitespace-pre-wrap"
+                      className="mx-auto -mt-2 max-w-2xs rounded-md bg-teal-300/200 p-3 px-4 py-1 text-center whitespace-pre-wrap text-black"
                     >
                       <SelectValue placeholder="Select type" />
                     </Badge>
@@ -367,9 +378,10 @@ const Create = () => {
               <Input
                 value={row.size ?? ""}
                 type="number"
+                id="size"
                 placeholder="Enter Size"
                 disabled={!isSizeEnabled}
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onFocus={() => {
                   props.tableMeta?.onCellEditingStart?.(props.rowIndex, "size")
                 }}
@@ -403,9 +415,9 @@ const Create = () => {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
             const options = subtypeOptionsByType[row.type] ?? []
-            const displayLabel =
-              options.find((option) => option.value === row.subtype)?.label ??
-              ""
+            // const displayLabel =
+            //   options.find((option) => option.value === row.subtype)?.label ??
+            //   ""
 
             // if (row.default) {
             //   row.default = ""
@@ -435,20 +447,23 @@ const Create = () => {
               >
                 <SelectTrigger
                   size="sm"
-                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+                  className="size-full items-center border-none bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  {displayLabel ? (
-                    <Badge
-                      variant="secondary"
-                      className="px-1.5 py-px whitespace-pre-wrap"
-                    >
-                      <SelectValue placeholder="Select subtype" />
-                    </Badge>
-                  ) : (
-                    <SelectValue placeholder="Select subtype" />
-                  )}
+                  {/* {displayLabel ? ( */}
+                  <Badge
+                    variant="secondary"
+                    className="mx-auto -mt-2 max-w-2xs rounded-md bg-teal-300/200 p-3 px-4 py-1 text-center whitespace-pre-wrap text-black"
+                  >
+                    <SelectValue
+                      placeholder="Select subtype"
+                      className="-mt-5"
+                    />
+                  </Badge>
+                  {/**    ) : (
+                   <SelectValue placeholder="Select subtype" className="-mt-5"/>
+                  )}*/}
                 </SelectTrigger>
                 <SelectContent
                   data-grid-cell-editor=""
@@ -480,8 +495,11 @@ const Create = () => {
               !props.readOnly
 
             return (
-              <div className="h-7 px-3 py-1">
+              <div className="flex h-full items-center px-3 py-1">
                 <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     if (!isValidValueEnabled) return
                     setOpenDialog(true)
@@ -525,30 +543,17 @@ const Create = () => {
               return (
                 <button
                   disabled
-                  className="w-full cursor-not-allowed px-2 py-1 text-left text-gray-400"
+                  className="size-full cursor-not-allowed bg-zinc-50 px-3 py-2 text-left text-sm text-zinc-400"
                 >
                   Enter Linked System Object
                 </button>
               )
             }
             return (
-              // <Input
-              //   value={val ?? ""}
-              //   placeholder="Enter Linked System Object"
-              //   className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
-              //   onChange={(e) => {
-              //     props.tableMeta?.onDataUpdate?.({
-              //       rowIndex: props.rowIndex,
-              //       columnId: "linkesystemobj",
-              //       value: e.target.value,
-              //     })
-              //   }}
-              //   onClick={(e) => e.stopPropagation()}
-              // />
               <Input
                 value={val ?? ""}
                 placeholder="Enter Linked System Object"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onFocus={() => {
                   props.tableMeta?.onCellEditingStart?.(
                     props.rowIndex,
@@ -576,6 +581,7 @@ const Create = () => {
         id: "mandatory",
         accessorKey: "mandatory",
         header: "Mandatory",
+
         meta: {
           cell: {
             variant: "checkbox",
@@ -586,10 +592,10 @@ const Create = () => {
         id: "default",
         accessorKey: "default",
         header: "Default",
+
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-            console.log(row.default)
 
             const validValueOptions =
               row.value
@@ -598,10 +604,6 @@ const Create = () => {
                   value: item.key || item.value,
                 }))
                 .filter((item) => item.label.trim() && item.value.trim()) ?? []
-
-            // const options =
-            //   yesNoDefaultOptions.length > 0 ? validValueOptions : null
-            // console.log(props.rowIndex)
             if (validValueOptions.length > 0) {
               return (
                 <Select
@@ -631,16 +633,12 @@ const Create = () => {
                     onClick={(event) => event.stopPropagation()}
                     onPointerDown={(event) => event.stopPropagation()}
                   >
-                    {/* {options ? ( */}
-                      <Badge
-                        variant="secondary"
-                        className="px-1.5 py-px whitespace-pre-wrap"
-                      >
-                        <SelectValue placeholder="Select default" />
-                      </Badge>
-                    {/* ) : (
+                    <Badge
+                      variant="secondary"
+                      className="mx-auto -mt-1.5 max-w-2xs rounded-md bg-teal-300/200 p-3 px-4 py-1 text-center whitespace-pre-wrap text-black"
+                    >
                       <SelectValue placeholder="Select default" />
-                    )} */}
+                    </Badge>
                   </SelectTrigger>
                   <SelectContent
                     data-grid-cell-editor=""
@@ -663,7 +661,7 @@ const Create = () => {
               <Input
                 value={row.default ?? ""}
                 placeholder="Enter default Value"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onFocus={() => {
                   props.tableMeta?.onCellEditingStart?.(
                     props.rowIndex,
@@ -688,7 +686,6 @@ const Create = () => {
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
@@ -713,13 +710,15 @@ const Create = () => {
           ? row.subtype
           : getDefaultSubtype(row.type)
 
-        // const isCheckbox = subtype === "st_checkbox"
-        // const validValues =
-        // row.value?.map((v) => v.key || v.value).filter(Boolean) ?? [];
-        // const defaultOptions = validValues.length > 0 ? validValues : null
         const isValidValueAllowed =
           row.type === "db_Alpha" && subtype !== "st_checkbox"
 
+        const validKeys =
+          row.value
+            ?.map((item) => item.key)
+            .filter((v): v is string => Boolean(v?.trim())) ?? []
+
+        // const isDefaultValid = !row.default || validKeys.includes(row.default)
         return {
           ...row,
           size:
@@ -728,13 +727,12 @@ const Create = () => {
               : undefined,
           subtype,
           value: isValidValueAllowed ? row.value : [],
-          // default: isValidValueAllowed ? row.default : "",
-          default: row.default,
-          // value: isCheckbox ? [] : row.value,
-          // default:
-          //   !defaultOptions || defaultOptions.includes(row.default!)
-          //     ? row.default
-          //     : "",
+          default:
+            validKeys.length > 0
+              ? validKeys.includes(row.default ?? "")
+                ? row.default
+                : ""
+              : row.default,
         }
       })
     )
@@ -751,18 +749,18 @@ const Create = () => {
   })
 
   return (
-    <section className="max-w-9xl mx-auto flex min-h-screen w-full flex-col gap-5 bg-[#f7f8fb] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
-      <div className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="flex min-h-screen w-full min-w-0 flex-col gap-5 bg-[#f7f8fb] px-2 py-5 text-zinc-950 sm:px-4 lg:px-4">
+      <div className="min-w-0 rounded-lg border border-zinc-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-zinc-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
-            <h1 className="text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">
+            <h2 className="text-xl! font-semibold tracking-normal text-zinc-950 sm:text-4xl">
               Create Fields
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-600 sm:text-base">
+            </h2>
+            <p className="-mt-0.5 max-w-xl text-xs! leading-6 text-zinc-600 sm:text-base">
               Define clean field names, descriptions
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <Tabs
               value={activeTab}
               onValueChange={(val) => setActiveTab(val as "header" | "row")}
@@ -791,26 +789,66 @@ const Create = () => {
             >
               {createMutation.isPending ? "Creating..." : "Create"}
             </Button>
-          </div>
+          </div> */}
         </div>
-        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Table Name</Label>
-            <Input
-              placeholder="Enter table name"
-              {...form.register("tableName")}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label>Table Description</Label>
-            <Input
-              placeholder="Enter table description"
-              {...form.register("description")}
-            />
+        <div className="w-full space-y-6 sm:p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="grid w-full gap-4 sm:grid-cols-2 md:max-w-xl">
+              <div className="space-y-2">
+                <Label>Table Name</Label>
+                <Input
+                  placeholder="Enter table name"
+                  {...form.register("tableName")}
+                className="border border-zinc-300 rounded-md"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Table Description</Label>
+                <Input
+                  placeholder="Enter table description"
+                  {...form.register("description")}
+                  className="border border-zinc-300"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Tabs
+                value={activeTab}
+                onValueChange={(val) => setActiveTab(val as "header" | "row")}
+              >
+                <TabsList className="rounded-lg bg-zinc-100 p-1">
+                  <TabsTrigger
+                    value="header"
+                    className="cursor-pointer rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:font-bold data-[state=active]:text-black data-[state=active]:shadow"
+                  >
+                    Header
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="row"
+                    className="cursor-pointer rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:font-bold data-[state=active]:text-black data-[state=active]:shadow"
+                  >
+                    Row
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <Button
+                type="button"
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={createMutation.isPending}
+                className="cursor-pointer bg-teal-700 text-white hover:bg-teal-800"
+              >
+                {createMutation.isPending ? "Creating..." : "Create"}
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="p-3 sm:p-5">
+
+        <div className="min-w-0 p-3 sm:p-5">
           <DataGridKeyboardShortcuts
             enableSearch
             enableUndoRedo
@@ -819,24 +857,39 @@ const Create = () => {
             enableRowsDelete={false}
           />
 
-          <DataGrid table={table} stretchColumns {...dataGridProps} />
+          <DataGrid
+            table={table}
+            stretchColumns
+            height={460}
+            {...dataGridProps}
+          />
         </div>
         <ValidValueDialog
           open={openDialog}
           onOpenChange={setOpenDialog}
           row={activeRow}
+          // onSave={(data) => {
+          //   if (!activeRow) return
+
+          //   setRows((prev) => {
+          //     const updated = prev.map((r) =>
+          //       r.id === activeRow.id ? { ...r, value: data } : r
+          //     )
+
+          //     localStorage.setItem("tableRows", JSON.stringify(updated))
+
+          //     return updated
+          //   })
+          // }}
           onSave={(data) => {
             if (!activeRow) return
 
-            setRows((prev) => {
-              const updated = prev.map((r) =>
-                r.id === activeRow.id ? { ...r, value: data } : r
-              )
+            const updated = rows.map((r) =>
+              r.id === activeRow.id ? { ...r, value: data } : r
+            )
 
-              localStorage.setItem("tableRows", JSON.stringify(updated))
-
-              return updated
-            })
+            handleDataChange(updated) // Update state with validation and adjustments
+            localStorage.setItem("tableRows", JSON.stringify(updated))
           }}
         />
       </div>

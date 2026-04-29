@@ -1,3 +1,4 @@
+import type { AxiosInstance } from "axios"
 import { sapApi } from "./client"
 
 type TableType = "bott_Document" | "bott_DocumentLines"
@@ -64,6 +65,7 @@ function getFieldSize(
   type: string,
   size?: number
 ): { Size: number | undefined; EditSize: number | undefined } {
+
   if (type === "db_Alpha") {
     const clamped = Math.min(Math.max(size ?? 1, 1), 254)
     return { Size: clamped, EditSize: clamped }
@@ -73,9 +75,41 @@ function getFieldSize(
   }
   // db_float, db_Memo, db_Date — SAP does not accept Size for these
   return { Size: undefined, EditSize: undefined }
+};
+
+// getting specific field id
+async function getFieldIds(tableName: string) {
+  const res = await sapApi.get(
+    `/UserFieldsMD?$filter=TableName eq '${tableName}'`
+  )
+
+  // Map fieldName  FieldID
+  const map: Record<string, number> = {}
+
+  for (const field of res.data.value) {
+    map[field.Name] = field.FieldID
+  }
+
+  return map
+}
+
+//function to add or update linked UDO
+async function updateLinkedUDO(
+  tableName: string,
+  fieldName: string,
+  fieldId: number,
+  linkedUDO: string
+) {
+  return sapApi.patch(
+    `/UserFieldsMD(TableName='${tableName}',FieldID=${fieldId})`,
+    {
+      LinkedUDO: `${linkedUDO}`,
+    }
+  )
 }
 
 export async function createUdoWithBatch(
+  client: AxiosInstance,
   table: CreateTablePayload,
   fields: CreateFieldPayload[]
 ) {
@@ -132,8 +166,8 @@ export async function createUdoWithBatch(
     const defaultValue = getText(field.defaultValue)
     if (defaultValue) fieldPayload.DefaultValue = defaultValue
 
-    const linkedUDO = getText(field.linkedUDO)
-    if (linkedUDO) fieldPayload.LinkedUDO = `@${linkedUDO}`
+    // const linkedUDO = getText(field.linkedUDO)
+    // if (linkedUDO) fieldPayload.LinkedUDO = `@${linkedUDO}`
 
     const linkedSys = getText(field.linkedSystemObject)
     if (linkedSys) fieldPayload.LinkedSystemObject = linkedSys
@@ -164,7 +198,7 @@ export async function createUdoWithBatch(
 
   const body = bodyParts.join("\r\n")
 
-  const res = await sapApi.post("/$batch", body, {
+  const res = await client.post("/$batch", body, {
     headers: {
       "Content-Type": `multipart/mixed; boundary=${batchBoundary}`,
       Connection: "keep-alive",
@@ -184,4 +218,46 @@ export async function createUdoWithBatch(
   }
 
   return res
+};
+
+//main function
+export async function createUdoWithBatchAndLink(
+  table: CreateTablePayload,
+  fields: CreateFieldPayload[]
+) {
+  const tableName = table.tableName.trim().replace(/^@/, "")
+
+  // Create table + fields without LinkedUDO
+  await createUdoWithBatch(
+    sapApi,
+    table,
+    fields.map((f) => ({
+      ...f,
+      linkedUDO: null,
+    }))
+  )
+
+  //  Fetch FieldIDs
+  const fieldIdMap = await getFieldIds(tableName)
+
+  // Update LinkedUDO separately
+  for (const field of fields) {
+    if (!field.linkedUDO) continue
+
+    const fieldId = fieldIdMap[field.name.trim()]
+
+    if (fieldId === undefined) {
+      console.warn(`FieldID not found for ${field.name}`)
+      continue
+    }
+
+    await updateLinkedUDO(
+      tableName,
+      field.name.trim(),
+      fieldId,
+      field.linkedUDO
+    )
+  }
+
+  return { success: true }
 }

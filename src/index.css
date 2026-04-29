@@ -40,6 +40,14 @@
   --border: #d9e0ea;
   --input: #cbd5e1;
   --ring: #14b8a6;
+  --sidebar: #fbfcfe;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #0f766e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e7f5f3;
+  --sidebar-accent-foreground: #115e59;
+  --sidebar-border: #d9e0ea;
+  --sidebar-ring: #14b8a6;
   font-family:
     Inter,
     ui-sans-serif,
@@ -65,6 +73,10 @@ body {
   min-height: 100vh;
   margin: 0;
   background: var(--background);
+}
+
+#root {
+  min-height: 100vh;
 }
 
 button,
@@ -185,4 +197,25 @@ code {
   background: var(--code-bg);
 } */
 
+/* @media screen and (min-width: 740) {
+  #toggle {
+    display: block;
+  }
+} */
+#size::-webkit-inner-spin-button,
+#size::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+};
 
+#grid-wrapper::-webkit-scrollbar {
+  width: 7px; /* Width of the vertical scrollbar */
+  height: 7px; /* Height of the horizontal scrollbar */
+}
+
+#grid-wrapper::-webkit-scrollbar-thumb {
+  cursor: pointer;
+  background-color: #a2a1a3; 
+  border: 10px solid #a2a1a3; /* Border around the thumb */
+  border-radius:30px; 
+}

@@ -207,7 +207,7 @@ function DataGridRowImpl<TData>({
       {...props}
       ref={rowRef}
       className={cn(
-        "absolute flex w-full border-b [content-visibility:auto]",
+        "absolute flex w-full border-b border-b-zinc-300 text-center bg-white [content-visibility:auto] hover:bg-zinc-50/60",
         !adjustLayout && "will-change-transform",
         className
       )}
@@ -250,14 +250,15 @@ function DataGridRowImpl<TData>({
             data-highlighted={isCellFocused ? "" : undefined}
             data-slot="grid-cell"
             tabIndex={-1}
-            className={cn({
+            className={cn("border-r border-zinc-100 last:border-r-0", {
               grow: stretchColumns && columnId !== "select",
-              "border-e": showEndBorder && columnId !== "select",
-              "border-s": showStartBorder && columnId !== "select",
+              "border-r-zinc-200": showEndBorder && columnId !== "select",
+              "border-l border-l-zinc-200":
+                showStartBorder && columnId !== "select",
             })}
             style={{
               ...getColumnPinningStyle({ column: cell.column, dir }),
-              width: `calc(var(--col-${columnId}-size) * 1px)`,textAlign:'center'
+              width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >
             {typeof cell.column.columnDef.header === "function" ? (

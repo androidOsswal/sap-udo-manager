@@ -122,7 +122,7 @@ export function DataGridColumnHeader<TData, TValue>({
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           className={cn(
-            "flex size-full items-center justify-between gap-2 p-2 text-sm hover:bg-accent/40 data-[state=open]:bg-accent/40 [&_svg]:size-4",
+            "flex size-full items-center justify-between gap-2 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 data-[state=open]:bg-zinc-100 [&_svg]:size-4",
             isAnyColumnResizing && "pointer-events-none",
             className
           )}
@@ -140,7 +140,7 @@ export function DataGridColumnHeader<TData, TValue>({
                 </TooltipContent>
               </Tooltip>
             )}
-            <span className="truncate text-[16px] font-medium">{label}</span>
+            <span className="truncate text-sm font-semibold">{label}</span>
           </div>
           <ChevronDownIcon className="shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>

@@ -20,6 +20,7 @@ import {
   CommandEmpty,
   CommandGroup,
 } from "@/components/ui/command"
+import { Badge } from "@/components/ui/badge"
 type TableRow = {
   id: string
   name: string
@@ -60,8 +61,6 @@ export default function LinkedUDOCell(props: DataGridCellProps<TableRow>) {
     enabled: open,
   })
 
-  
-
   if (isDisabled || linkesystemobj) {
     return (
       <button
@@ -90,13 +89,19 @@ export default function LinkedUDOCell(props: DataGridCellProps<TableRow>) {
       }}
     >
       <DialogTrigger asChild>
-        <button
+        {/* <button
           disabled={props.readOnly}
           className="w-full px-2 py-1 text-left"
           onClick={(event) => event.stopPropagation()}
         >
           {val || "Select linked UDO"}
-        </button>
+        </button> */}
+        <Badge
+          variant="secondary"
+          className="mt-2 rounded-md mx-auto max-w-2xs bg-teal-300/200 px-4 py-1 p-3 text-center whitespace-pre-wrap text-black"
+        >
+          {val ? val : "Select linked UDO"}
+        </Badge>
       </DialogTrigger>
       <DialogContent
         className="max-w-md p-0"

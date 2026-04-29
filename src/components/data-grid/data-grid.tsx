@@ -96,8 +96,10 @@ export function DataGrid<TData>({
       data-slot="grid-wrapper"
       dir={dir}
       {...props}
-      className={cn("relative flex w-full flex-col", className)}
-      
+      className={cn(
+        "relative flex w-full max-w-full min-w-0 flex-col",
+        className
+      )}
     >
       {searchState && <DataGridSearch {...searchState} />}
       <DataGridContextMenu
@@ -114,7 +116,8 @@ export function DataGrid<TData>({
         data-slot="grid"
         tabIndex={0}
         ref={dataGridRef}
-        className="relative grid overflow-auto rounded-md border select-none focus:outline-none"
+        
+        className="relative grid w-full max-w-full overflow-x-auto overflow-y-auto rounded-md border border-zinc-200 bg-white p-0 shadow-sm select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/20"
         style={{
           ...columnSizeVars,
           maxHeight: `${height}px`,
@@ -126,7 +129,7 @@ export function DataGrid<TData>({
           role="rowgroup"
           data-slot="grid-header"
           ref={headerRef}
-          className="sticky top-0 z-10 grid border-b bg-background"
+          className="sticky top-0 z-10 grid border-b border-zinc-200 bg-zinc-50/95 backdrop-blur"
         >
           {table.getHeaderGroups().map((headerGroup, rowIndex) => (
             <div
@@ -170,13 +173,16 @@ export function DataGrid<TData>({
                     }
                     data-slot="grid-header-cell"
                     tabIndex={-1}
-                    className={cn("relative", {
-                      grow: stretchColumns && header.column.id !== "select",
-                      "border-e":
-                        showEndBorder && header.column.id !== "select",
-                      "border-s":
-                        showStartBorder && header.column.id !== "select",
-                    })}
+                    className={cn(
+                      "relative border-r border-zinc-200/80 last:border-r-0",
+                      {
+                        grow: stretchColumns && header.column.id !== "select",
+                        "border-r-zinc-200":
+                          showEndBorder && header.column.id !== "select",
+                        "border-l border-l-zinc-200":
+                          showStartBorder && header.column.id !== "select",
+                      }
+                    )}
                     style={{
                       ...getColumnPinningStyle({ column: header.column, dir }),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
@@ -250,7 +256,7 @@ export function DataGrid<TData>({
             role="rowgroup"
             data-slot="grid-footer"
             ref={footerRef}
-            className="sticky bottom-0 z-10 grid border-t bg-background"
+            className="sticky bottom-0 z-10 grid border-t border-zinc-200 bg-white"
           >
             <div
               role="row"
@@ -262,18 +268,23 @@ export function DataGrid<TData>({
               <div
                 role="gridcell"
                 tabIndex={0}
-                className="relative m-4  flex h-9 grow items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+                className="relative m-3 flex h-9 grow items-center bg-zinc-50/60 transition-colors hover:bg-zinc-100 focus:bg-zinc-100 focus:outline-none"
                 style={{
-                  width: table.getTotalSize(),
-                  minWidth: table.getTotalSize(),
+                  width: "100%",
+                  minWidth: 0,
                 }}
                 // onClick={onRowAdd}
                 // onKeyDown={onFooterCellKeyDown}
               >
-                <div className="sticky inset-s-0 flex items-center gap-2 px-3 text-muted-foreground border border-black rounded-sm py-1">
-                  <Plus className="size-4 text-black font-semibold" />
-                  <span className="text-sm text-black font-semibold cursor-pointer" onClick={onRowAdd}
-                onKeyDown={onFooterCellKeyDown}>Add row</span>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="sticky inset-s-0 flex cursor-pointer items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-xs transition-colors hover:border-teal-600 hover:text-teal-700"
+                  onClick={onRowAdd}
+                  onKeyDown={onFooterCellKeyDown}
+                >
+                  <Plus className="size-4" />
+                  <span>Add field</span>
                 </div>
               </div>
             </div>

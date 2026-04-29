@@ -10,7 +10,7 @@ import type { DataGridCellProps } from "@/types/data-grid"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Badge } from "@/components/ui/badge"
+
 import {
   Select,
   SelectContent,
@@ -43,7 +43,7 @@ import {
   CommandGroup,
 } from "@/components/ui/command"
 import { Plus } from "lucide-react"
-
+import CopyToCompany from "@/components/CopyToCompDialog"
 
 export type UserTableMD = {
   TableName: string
@@ -63,10 +63,10 @@ type TableSelectionType = {
   mode: "name" | "description"
   value: string
   onSelect: (table: UserTableMD) => void
-  tableType: string
+  tableType: "bott_Document" | "bott_DocumentLines" | null
   disable?: boolean
 }
-type TableRow = {
+export type TableRow = {
   id: string
   fieldId?: number //FieldID, need for PATCH
   name: string
@@ -85,7 +85,6 @@ function TableSelectorDialog({
   mode,
   value,
   onSelect,
-  // tableType,
   disable,
 }: TableSelectionType) {
   const [open, setOpen] = React.useState(false)
@@ -94,13 +93,16 @@ function TableSelectorDialog({
 
   const { data: userTables = [], refetch } = useQuery({
     queryKey: ["userTables", search],
-    queryFn: () => fetchUserTables(search),
+    queryFn: () => fetchUserTables(search.toUpperCase()),
   })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="w-full rounded-md border border-input bg-transparent px-3 py-1 text-left">
+        <button
+          className={`w-full rounded-md border border-input bg-transparent px-3 py-1 text-left ${disable ? "cursor-not-allowed text-zinc-500" : "bg-white"}`}
+          disabled={disable}
+        >
           {value ||
             (mode === "name" ? "Select Table Name" : "Select Description")}
         </button>
@@ -117,7 +119,7 @@ function TableSelectorDialog({
             placeholder={
               mode === "name" ? "Search table..." : "Search description..."
             }
-            value={search}
+            value={search.toUpperCase()}
             onValueChange={setSearch}
           />
 
@@ -143,7 +145,6 @@ function TableSelectorDialog({
                       onSelect(t)
                       setOpen(false)
                       refetch()
-                      
                     }}
                   >
                     {mode === "name" ? (
@@ -170,10 +171,7 @@ function TableSelectorDialog({
 }
 
 //constant
-// const yesNoDefaultOptions = [
-//   { label: "Yes", value: "tYES" },
-//   { label: "No", value: "tNO" },
-// ]
+
 const typeOptionByValue: Record<string, { label?: string; value: string }[]> = {
   db_Alpha: [{ value: "db_Alpha", label: "Text" }],
   db_Memo: [{ value: "db_Memo", label: "Long Text" }],
@@ -308,10 +306,16 @@ function createEmptyRow(): TableRow {
 
 const ManageFields = () => {
   const [rows, setRows] = React.useState<TableRow[]>([])
-  const [selectedTableType, setSelectedTableType] = React.useState<string>("")
   const [openDialog, setOpenDialog] = React.useState(false)
+  const [open, setOpen] = React.useState(false)
   const [activeRow, setActiveRow] = React.useState<TableRow | null>(null)
+
+  const [selectedTableType, setSelectedTableType] = React.useState<
+    "bott_Document" | "bott_DocumentLines" | null
+  >(null)
+
   const [selectedTableName, setSelectedTableName] = React.useState<string>("")
+
   const [selectedDescription, setSelectedDescription] = React.useState("")
 
   // fetch fields when a table is selected
@@ -458,9 +462,10 @@ const ManageFields = () => {
 
     updateMutation.mutate(rows)
   }
+  const gridInputClass =
+    "size-full rounded-none border-none !bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:!bg-transparent disabled:text-zinc-400 disabled:opacity-100"
 
   //Columns
-
   const columns = React.useMemo<ColumnDef<TableRow>[]>(
     () => [
       {
@@ -489,7 +494,7 @@ const ManageFields = () => {
               <Input
                 value={row.name ?? ""}
                 placeholder="Enter Name"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
@@ -509,7 +514,6 @@ const ManageFields = () => {
         header: "Description",
         meta: {
           customCell: (props) => {
-            const row = props.cell.row.original    
             const row = props.cell.row.original
             // const isExistingRow = row.fieldId !== undefined
             // if (isExistingRow) {
@@ -523,7 +527,7 @@ const ManageFields = () => {
               <Input
                 value={row.description ?? ""}
                 placeholder="Enter description"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
@@ -549,13 +553,11 @@ const ManageFields = () => {
 
             const displaylabel =
               options?.find((op) => op.value === row.type)?.label ?? "—"
-            console.log(displaylabel)
 
             const isExistingRow = row.fieldId !== undefined
             if (isExistingRow) {
               return (
                 <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-700">
-                  {displaylabel}
                   {displaylabel || "—"}
                 </span>
               )
@@ -585,14 +587,14 @@ const ManageFields = () => {
               >
                 <SelectTrigger
                   size="sm"
-                  className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+                  className="size-full items-center border-none bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
                   {displaylabel ? (
                     <Badge
                       variant="secondary"
-                      className="px-1.5 py-px whitespace-pre-wrap"
+                      className="mx-auto -mt-2 max-w-2xs rounded-md bg-teal-300/200 p-3 px-4 py-1 text-center whitespace-pre-wrap text-black"
                     >
                       <SelectValue placeholder="Select type" />
                     </Badge>
@@ -632,9 +634,10 @@ const ManageFields = () => {
                 value={row.size ?? ""}
                 min={1}
                 max={254}
+                id="size"
                 disabled={!isSizeEnabled}
                 placeholder="—"
-                className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 enabled:cursor-pointer disabled:cursor-not-allowed disabled:text-zinc-400 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="size-full rounded-none border-none bg-transparent! px-2 py-1.5 shadow-none focus-visible:ring-0 enabled:cursor-pointer disabled:cursor-not-allowed disabled:text-zinc-400 disabled:opacity-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 onChange={(e) => {
                   const val = e.target.value
                   const size =
@@ -687,6 +690,7 @@ const ManageFields = () => {
                   }
                 }}
                 onValueChange={(value) => {
+                  row.default = ""
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
                     columnId: props.columnId,
@@ -703,7 +707,7 @@ const ManageFields = () => {
                   {displaylabel ? (
                     <Badge
                       variant="secondary"
-                      className="px-1.5 py-px whitespace-pre-wrap"
+                      className="mx-auto mt-0.5 max-w-2xs rounded-md bg-teal-300/200 p-3 px-4 py-1 text-center whitespace-pre-wrap text-black"
                     >
                       <SelectValue placeholder="Select subtype" />
                     </Badge>
@@ -740,8 +744,11 @@ const ManageFields = () => {
               props.cell.row.original.subtype !== "st_Checkbox" &&
               !props.readOnly
             return (
-              <div className="h-7 px-3 py-1">
+              <div className="flex h-full items-center px-3 py-1">
                 <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     if (!isValidValueEnabled) return
                     setOpenDialog(true)
@@ -762,13 +769,6 @@ const ManageFields = () => {
         accessorKey: "linkeUDO",
         header: "Linked UDO",
         meta: {
-          // customCell: (props: DataGridCellProps<TableRow>) => {
-          //   return (
-          //     <span className="w-full cursor-not-allowed px-2 py-1.5 text-sm text-zinc-500">
-          //       {props.cell.row.original.linkeUDO || "—"}
-          //     </span>
-          //   )
-          // },
           customCell: (props: DataGridCellProps<TableRow>) => {
             return <LinkedUDOCell {...props} />
           },
@@ -791,7 +791,7 @@ const ManageFields = () => {
               return (
                 <button
                   disabled
-                  className="w-full cursor-not-allowed px-2 py-1 text-left text-gray-400"
+                  className="size-full cursor-not-allowed bg-transparent px-2 py-1 text-left text-gray-400"
                 >
                   —
                 </button>
@@ -801,7 +801,7 @@ const ManageFields = () => {
               <Input
                 value={val ?? ""}
                 placeholder="Enter Linked System Object"
-                className="size-full border-none bg-transparent px-2 py-1.5 focus-visible:ring-0"
+                className={gridInputClass}
                 onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
@@ -821,108 +821,6 @@ const ManageFields = () => {
         header: "Mandatory",
         meta: { cell: { variant: "checkbox" } },
       },
-      // {
-      //   id: "default",
-      //   accessorKey: "default",
-      //   header: "Default",
-      //   meta: {
-      //     customCell: (props: DataGridCellProps<TableRow>) => {
-      //       const row = props.cell.row.original
-
-      //       if (!row.mandatory) {
-      //         row.default = ""
-      //       }
-      //       const validValueOptions =
-      //         row.value
-      //           ?.map((item) => ({
-      //             label: item.value || item.key,
-      //             value: item.key || item.value,
-      //           }))
-      //           .filter((item) => item.label.trim() && item.value.trim()) ?? []
-
-      //       const options = row.mandatory
-      //         ? yesNoDefaultOptions
-      //         : validValueOptions
-      //       const displayLabel =
-      //         options.find((o) => o.value === row.default)?.label ?? ""
-
-      //       if (row.mandatory || validValueOptions.length > 0) {
-      //         return (
-      //           <Select
-      //             value={row.default ?? ""}
-      //             disabled={!options.length || props.readOnly}
-      //             onOpenChange={(open) => {
-      //               if (open && !props.readOnly) {
-      //                 props.tableMeta?.onCellEditingStart?.(
-      //                   props.rowIndex,
-      //                   props.columnId
-      //                 )
-      //               } else {
-      //                 props.tableMeta?.onCellEditingStop?.()
-      //               }
-      //             }}
-      //             onValueChange={(value) => {
-      //               props.tableMeta?.onDataUpdate?.({
-      //                 rowIndex: props.rowIndex,
-      //                 columnId: props.columnId,
-      //                 value,
-      //               })
-      //             }}
-      //           >
-      //             <SelectTrigger
-      //               size="sm"
-      //               className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
-      //               onClick={(e) => e.stopPropagation()}
-      //               onPointerDown={(e) => e.stopPropagation()}
-      //             >
-      //               {displayLabel ? (
-      //                 <Badge
-      //                   variant="secondary"
-      //                   className="px-1.5 py-px whitespace-pre-wrap"
-      //                 >
-      //                   <SelectValue placeholder="Select default" />
-      //                 </Badge>
-      //               ) : (
-      //                 <SelectValue placeholder="—" />
-      //               )}
-      //             </SelectTrigger>
-      //             <SelectContent
-      //               data-grid-cell-editor=""
-      //               align="start"
-      //               alignOffset={-8}
-      //               sideOffset={-8}
-      //               className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
-      //             >
-      //               {options.map((option) => (
-      //                 <SelectItem key={option.value} value={option.value}>
-      //                   {option.label}
-      //                 </SelectItem>
-      //               ))}
-      //             </SelectContent>
-      //           </Select>
-      //         )
-      //       }
-
-      //       return (
-      //         <Input
-      //           value={row.default ?? ""}
-      //           disabled={props.readOnly}
-      //           placeholder="—"
-      //           className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
-      //           onChange={(e) => {
-      //             props.tableMeta?.onDataUpdate?.({
-      //               rowIndex: props.rowIndex,
-      //               columnId: props.columnId,
-      //               value: e.target.value,
-      //             })
-      //           }}
-      //           onClick={(e) => e.stopPropagation()}
-      //           onMouseDown={(e) => e.stopPropagation()}
-      //         />
-      //       )
-      //     },
-      //   },
-      // },
       {
         id: "default",
         accessorKey: "default",
@@ -930,29 +828,86 @@ const ManageFields = () => {
         meta: {
           customCell: (props: DataGridCellProps<TableRow>) => {
             const row = props.cell.row.original
-            const isMandatory = row.mandatory === true
+
+            const validValueOptions =
+              row.value
+                ?.map((item) => ({
+                  label: item.value || item.key,
+                  value: item.key || item.value,
+                }))
+                .filter((item) => item.label.trim() && item.value.trim()) ?? []
+
+            if (validValueOptions.length > 0) {
+              return (
+                <Select
+                  value={row.default ?? ""}
+                  disabled={props.readOnly}
+                  onOpenChange={(open) => {
+                    if (open && !props.readOnly) {
+                      props.tableMeta?.onCellEditingStart?.(
+                        props.rowIndex,
+                        props.columnId
+                      )
+                    } else {
+                      props.tableMeta?.onCellEditingStop?.()
+                    }
+                  }}
+                  onValueChange={(value) => {
+                    props.tableMeta?.onDataUpdate?.({
+                      rowIndex: props.rowIndex,
+                      columnId: props.columnId,
+                      value,
+                    })
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
+                    onClick={(event) => event.stopPropagation()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    {/* {options ? ( */}
+                    <Badge
+                      variant="secondary"
+                      className="mx-auto mt-0.5 max-w-2xs rounded-md bg-teal-300/200 p-3 px-4 py-1 text-center whitespace-pre-wrap text-black"
+                    >
+                      <SelectValue placeholder="Select default" />
+                    </Badge>
+                    {/* ) : (
+                           <SelectValue placeholder="Select default" />
+                         )} */}
+                  </SelectTrigger>
+                  <SelectContent
+                    data-grid-cell-editor=""
+                    align="start"
+                    alignOffset={-8}
+                    sideOffset={-8}
+                    className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+                  >
+                    {validValueOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )
+            }
 
             return (
-              // <Input
-              //   value={row.default ?? ""}
-              //   disabled={props.readOnly}
-              //   placeholder="—"
-              //   className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
-              //   onChange={(e) => {
-              //     props.tableMeta?.onDataUpdate?.({
-              //       rowIndex: props.rowIndex,
-              //       columnId: props.columnId,
-              //       value: e.target.value,
-              //     })
-              //   }}
-              //   onClick={(e) => e.stopPropagation()}
-              //   onMouseDown={(e) => e.stopPropagation()}
-              // />
               <Input
                 value={row.default ?? ""}
-                disabled={!isMandatory || props.readOnly}
-                placeholder={isMandatory ? "Enter default value" : "—"}
-                className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+                placeholder="Enter default Value"
+                className={gridInputClass}
+                onFocus={() => {
+                  props.tableMeta?.onCellEditingStart?.(
+                    props.rowIndex,
+                    "default"
+                  )
+                }}
+                onBlur={() => {
+                  props.tableMeta?.onCellEditingStop?.()
+                }}
                 onChange={(e) => {
                   props.tableMeta?.onDataUpdate?.({
                     rowIndex: props.rowIndex,
@@ -967,6 +922,50 @@ const ManageFields = () => {
           },
         },
       },
+      // {
+      //   id: "default",
+      //   accessorKey: "default",
+      //   header: "Default",
+      //   meta: {
+      //     customCell: (props: DataGridCellProps<TableRow>) => {
+      //       const row = props.cell.row.original
+      //       const isMandatory = row.mandatory === true
+
+      //       return (
+      //         // <Input
+      //         //   value={row.default ?? ""}
+      //         //   disabled={props.readOnly}
+      //         //   placeholder="—"
+      //         //   className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+      //         //   onChange={(e) => {
+      //         //     props.tableMeta?.onDataUpdate?.({
+      //         //       rowIndex: props.rowIndex,
+      //         //       columnId: props.columnId,
+      //         //       value: e.target.value,
+      //         //     })
+      //         //   }}
+      //         //   onClick={(e) => e.stopPropagation()}
+      //         //   onMouseDown={(e) => e.stopPropagation()}
+      //         // />
+      //         <Input
+      //           value={row.default ?? ""}
+      //           disabled={ props.readOnly}
+      //           placeholder={"Enter default value"}
+      //           className="size-full rounded-none border-none bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400"
+      //           onChange={(e) => {
+      //             props.tableMeta?.onDataUpdate?.({
+      //               rowIndex: props.rowIndex,
+      //               columnId: props.columnId,
+      //               value: e.target.value,
+      //             })
+      //           }}
+      //           onClick={(e) => e.stopPropagation()}
+      //           onKeyDown={(e) => e.stopPropagation()}
+      //         />
+      //       )
+      //     },
+      //   },
+      // },
     ],
 
     []
@@ -984,58 +983,35 @@ const ManageFields = () => {
     }
   }, [])
 
-  // const handleDataChange = React.useCallback((data: TableRow[]) => {
-  //   const updated = data.map((row) => {
-  //     const subtypeOptions = subtypeOptionsByType[row.type] ?? []
-  //     const hasValidSubtype =
-  //       !!row.subtype && subtypeOptions.some((o) => o.value === row.subtype)
-  //     const nextSubtype = hasValidSubtype
-  //       ? row.subtype
-  //       : getDefaultSubtype(row.type)
-  //     const isCheckboxSubtype = nextSubtype === "st_Checkbox"
-  //     const validValueDefaultOptions =
-  //       row.value
-  //         ?.map((item) => item.key || item.value)
-  //         .filter((v): v is string => Boolean(v?.trim())) ?? []
-  //     const defaultOptions = row.mandatory
-  //       ? ["tYES", "tNO"]
-  //       : validValueDefaultOptions.length > 0
-  //         ? validValueDefaultOptions
-  //         : null
-  //     const hasValidDefault =
-  //       !defaultOptions || !row.default || defaultOptions.includes(row.default)
-  //     return {
-  //       ...row,
-  //       size:
-  //         row.type === "db_Alpha" && typeof row.size === "number"
-  //           ? Math.min(Math.max(row.size, 1), 254)
-  //           : undefined,
-  //       subtype: nextSubtype,
-  //       value: isCheckboxSubtype ? [] : row.value,
-  //       default: hasValidDefault ? row.default : "",
-  //     }
-  //   })
-  //   setRows(updated)
-  // }, [])
-
   const handleDataChange = React.useCallback((data: TableRow[]) => {
     const updated = data.map((row) => {
-      const subtypeOptions = subtypeOptionsByType[row.type] ?? []
-      const hasValidSubtype =
-        !!row.subtype && subtypeOptions.some((o) => o.value === row.subtype)
-      const nextSubtype = hasValidSubtype
+      const options = subtypeOptionsByType[row.type] ?? [] //list of option
+
+      const subtype = options.some((o) => o.value === row.subtype)
         ? row.subtype
         : getDefaultSubtype(row.type)
-      const isCheckboxSubtype = nextSubtype === "st_Checkbox"
+
+      const isValidValueAllowed =
+        row.type === "db_Alpha" && subtype !== "st_checkbox"
+      const validKeys =
+        row.value
+          ?.map((item) => item.key)
+          .filter((v): v is string => Boolean(v?.trim())) ?? []
+
       return {
         ...row,
         size:
-          row.type === "db_Alpha" && typeof row.size === "number"
-            ? Math.min(Math.max(row.size, 1), 254)
+          row.type === "db_Alpha"
+            ? Math.min(Math.max(row.size ?? 1, 1), 254)
             : undefined,
-        subtype: nextSubtype,
-        value: isCheckboxSubtype ? [] : row.value,
-        default: row.mandatory ? row.default : "",
+        subtype,
+        value: isValidValueAllowed ? row.value : [],
+        default:
+          validKeys.length > 0
+            ? validKeys.includes(row.default ?? "")
+              ? row.default
+              : ""
+            : row.default,
       }
     })
     setRows(updated)
@@ -1056,27 +1032,42 @@ const ManageFields = () => {
 
   //Render
   return (
-    <section className="max-w-9xl mx-auto flex min-h-screen w-full flex-col gap-5 bg-[#f7f8fb] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
+    <section className="max-w-9xl mx-auto flex min-h-screen w-full flex-col gap-5 bg-[#f7f8fb] px-4 py-5 text-zinc-950 sm:px-6 lg:px-2">
       <div className="rounded-lg border border-zinc-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-zinc-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
-            <h1 className="text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">
+            <h1 className="text-xl! font-semibold tracking-normal text-zinc-950 sm:text-4xl">
               Manage Fields
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-600 sm:text-base">
+            <p className="-mt-0.5 max-w-xl text-xs! leading-6 text-zinc-600 sm:text-base">
               Select a table to view and edit its fields.
             </p>
           </div>
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={
-              updateMutation.isPending || !isTableSelected || isLoadingAny
-            }
-            className="cursor-pointer bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50"
-          >
-            {updateMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
+          <div className="flex items-center justify-between gap-4">
+            <Button
+              type="button"
+              onClick={onSubmit}
+              disabled={
+                updateMutation.isPending || !isTableSelected || isLoadingAny
+              }
+              className="cursor-pointer bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!selectedTableName || !selectedTableType) {
+                  toast.warning("Select table properly")
+                  return
+                }
+                setOpen(true)
+              }}
+              className="cursor-pointer bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50"
+            >
+              Copy to Company
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
@@ -1088,10 +1079,10 @@ const ManageFields = () => {
               value={selectedTableName}
               tableType={selectedTableType}
               onSelect={(t: UserTableMD) => {
-                setRows([])
                 setSelectedTableName(t.TableName)
                 setSelectedDescription(t.TableDescription ?? "")
                 setSelectedTableType(t.TableType)
+                setRows([])
               }}
             />
           </div>
@@ -1114,10 +1105,11 @@ const ManageFields = () => {
           <div className="space-y-2">
             <Label>Table Type</Label>
             <Select
-              value={selectedTableType}
+              value={selectedTableType ?? ""}
               onValueChange={(val) => {
-                setSelectedTableType(val)
-                // setRows([]) // reset when changed
+                setSelectedTableType(
+                  val as "bott_Document" | "bott_DocumentLines"
+                )
               }}
               disabled
             >
@@ -1174,6 +1166,15 @@ const ManageFields = () => {
               )
             )
           }}
+        />
+        <CopyToCompany
+          open={open}
+          onOpenChange={setOpen}
+          table={selectedTableName}
+          rows={rows}
+          TableType={
+            selectedTableType as "bott_Document" | "bott_DocumentLines"
+          }
         />
       </div>
     </section>

@@ -69,7 +69,7 @@ function DataGridCellImpl<TData>({
   const variant = cellOpts?.variant ?? "text"
 
   let Comp: React.ComponentType<DataGridCellProps<TData>>
-const customCell = cell.column.columnDef.meta?.customCell
+  const customCell = cell.column.columnDef.meta?.customCell
   switch (variant) {
     case "short-text":
       Comp = ShortTextCell
@@ -104,36 +104,36 @@ const customCell = cell.column.columnDef.meta?.customCell
       break
   }
 
-if (typeof customCell === "function") {
-  return customCell({
-    cell,
-    tableMeta,
-    rowIndex,
-    columnId,
-    rowHeight,
-    isEditing,
-    isFocused,
-    isSelected,
-    isSearchMatch,
-    isActiveSearchMatch,
-    readOnly,
-    renderValue: cell.getValue,
-  })
-}
-return (
-  <Comp
-    cell={cell}
-    tableMeta={tableMeta}
-    rowIndex={rowIndex}
-    columnId={columnId}
-    rowHeight={rowHeight}
-    isEditing={isEditing}
-    isFocused={isFocused}
-    isSelected={isSelected}
-    isSearchMatch={isSearchMatch}
-    isActiveSearchMatch={isActiveSearchMatch}
-    readOnly={readOnly}
-    renderValue={() => cell.getValue()}
-  />
-)
+  if (typeof customCell === "function") {
+    return customCell({
+      cell,
+      tableMeta,
+      rowIndex,
+      columnId,
+      rowHeight,
+      isEditing,
+      isFocused,
+      isSelected,
+      isSearchMatch,
+      isActiveSearchMatch,
+      readOnly,
+      renderValue: cell.getValue,
+    })
+  }
+  return (
+    <Comp
+      cell={cell}
+      tableMeta={tableMeta}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      rowHeight={rowHeight}
+      isEditing={isEditing}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
+      renderValue={() => cell.getValue()}
+    />
+  )
 }
